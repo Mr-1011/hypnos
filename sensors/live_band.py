@@ -150,7 +150,7 @@ class BandLink(BleLink):
             self.connects += 1
             self.attempts = 0
             self.last_error = None
-            self.remember(self.device)
+            self.remember({"name": band.name, "address": band.name})  # no "(pretend)": the real band has the same name
             self.set_link("streaming")
             self.log(f"connected {self.device['name']}, firmware {self.firmware}")
             self.back()
