@@ -3,8 +3,10 @@
     cd sensors && ../.venv/bin/python -m unittest test_live_band
 """
 import asyncio
+import base64
 import contextlib
 import io
+import json
 import tempfile
 import threading
 import unittest
@@ -95,6 +97,29 @@ class Sim(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(ears.fed, fed)  # nothing goes out after the switch
             await b.shutdown()
 
+    async def test_sound_stream_for_the_agent(self):
+        with tempfile.TemporaryDirectory() as d, contextlib.redirect_stdout(io.StringIO()):
+            b = BandLink("sim")
+            b.data = Path(d)
+            server = await asyncio.start_server(b.serve, "127.0.0.1", 0)
+            pub = asyncio.ensure_future(b.publisher())
+            await b.autoconnect()
+            await asyncio.sleep(1)
+            self.assertFalse(b.mic_live)
 
-if __name__ == "__main__":
-    unittest.main()
+            r, w = await asyncio.open_connection("127.0.0.1", server.sockets[0].getsockname()[1])
+            w.write(b"GET /api/audio HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n")
+            got = b""
+            while got.count(b'"opus"') < 10:  # the microphone comes on because someone listens
+                got += await asyncio.wait_for(r.read(4096), 3)
+            self.assertTrue(b.mic_live)
+            self.assertTrue(b.state()["mic"]["agent"])
+            first = json.loads(got[got.index(b"data: ") + 6:].split(b"\n")[0])
+            self.assertGreater(len(base64.b64decode(first["opus"])), 10)
+
+            w.close()
+            await asyncio.sleep(1.5)  # the stream notices within its 1 s ping
+            self.assertFalse(b.mic_live)  # nobody listens: the microphone is off again
+            pub.cancel()
+            server.close()
+            await b.shutdown()

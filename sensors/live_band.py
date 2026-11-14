@@ -14,6 +14,8 @@ link back for 2 minutes. After that this program looks again until the switch go
 API on 127.0.0.1:5303 (the page reaches it as /api/band):
     GET  /api/stream       server-sent events: state, data (20 Hz: acc and gyro samples), stats (2 Hz), event,
                            text (what the microphone hears: guesses with final 0, then the settled line)
+    GET  /api/audio        server-sent events for the agent program: the microphone's Opus packets,
+                           {"seq", "opus" (base64)}. The microphone is on while someone listens here.
     GET  /api/state
     POST /api/autoconnect  look for the band until it answers (double-tap it: it can be found for 60 s)
     POST /api/disconnect   and stop looking
@@ -34,6 +36,7 @@ pretend band has no microphone: it plays the kit's recording of a person reading
 """
 import argparse
 import asyncio
+import base64
 import collections
 import json
 import math
@@ -121,6 +124,9 @@ class BandLink(BleLink):
         self.voice = {"audio_packets": audio.ogg_packets(kit.SAMPLE_SPEECH)} if transport == "sim" else {}
         self.band = None
         self.ears = None             # the Deepgram connection; not None = the microphone is switched on
+        self.listeners = set()       # the agent program on /api/audio; it does its own speech to text
+        self.streams["/api/audio"] = self.listeners
+        self.mic_live = False        # what the band was last told
         self.sound = None            # the band's packets on their way to feed()
         self.mic_err = None          # why the microphone went off by itself (Deepgram hung up)
         self.lines = collections.deque(maxlen=50)  # [utc_ms, what was said], settled lines only
@@ -155,7 +161,8 @@ class BandLink(BleLink):
                 try:
                     for event in ("motion", "event", "activity", "audio", "battery", "link", "reconnecting", "reconnected", "disconnect"):
                         band.on(event, getattr(self, "on_" + event))
-                    await band.configure(motion=RATE, events=True, activity=True, battery=True, link=True, audio=bool(self.ears))
+                    self.mic_live = self.mic_wanted()
+                    await band.configure(motion=RATE, events=True, activity=True, battery=True, link=True, audio=self.mic_live)
                 except BaseException:
                     await band.disconnect()  # never leave a linked band that nobody holds
                     raise
@@ -278,15 +285,23 @@ class BandLink(BleLink):
                 self.log("microphone off")
         self.push_state()
 
+    def mic_wanted(self):
+        return bool(self.ears) or bool(self.listeners)
+
     async def mic_to_band(self):
-        """The band's microphone follows the switch. A link that is down has it off already; the
-        connect and on_reconnected set it again."""
+        """The band's microphone follows the switch and the agent's stream. A link that is down has
+        it off already; the connect and on_reconnected set it again."""
         if self.band and not self.band.reconnecting:
-            await self.band.configure(audio=bool(self.ears))
+            want = self.mic_wanted()
+            await self.band.configure(audio=want)
+            if want != self.mic_live:
+                self.mic_live = want
+                self.push_state()
 
     def on_audio(self, a):
         if self.ears:
             self.sound.put(a)
+        self.broadcast({"seq": a.seq, "opus": base64.b64encode(a.opus).decode()}, self.listeners)
 
     def heard(self, text, final):
         ts = int(time.time() * 1000)
@@ -349,7 +364,8 @@ class BandLink(BleLink):
             rec = {"on": True, "dir": self.rec.dir.name, "label": self.rec.meta.get("label"),
                    "since": self.rec.meta["start_utc_ms"]}
         return {"t": "state", **self.link_state(), "firmware": self.firmware, "rec": rec,
-                "mic": {"on": bool(self.ears), "err": self.mic_err}, "lines": list(self.lines)}
+                "mic": {"on": bool(self.ears), "err": self.mic_err, "agent": bool(self.listeners)},
+                "lines": list(self.lines)}
 
     async def publisher(self):
         def cols(rows, nd):
@@ -362,6 +378,8 @@ class BandLink(BleLink):
             p, self.pend = self.pend, self.empty_pending()
             if p["acc"]:
                 self.broadcast({"t": "data", "acc": cols(p["acc"], 3), "gyro": cols(p["gyro"], 1)})
+            if self.band and self.mic_wanted() != self.mic_live:  # the agent's stream came or went
+                await self.mic_to_band()
             if n % 10 == 0:
                 self.broadcast(self.stats())
                 # shortcut: a Deepgram connection that dies switches the microphone off and waits

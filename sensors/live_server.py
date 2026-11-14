@@ -68,6 +68,7 @@ class LiveServer:
 
     def __init__(self):
         self.clients = set()
+        self.streams = {}  # more event streams a program offers: path -> its own set of clients
 
     def state(self):
         raise NotImplementedError
@@ -81,11 +82,12 @@ class LiveServer:
     def push_state(self):
         self.broadcast(self.state())
 
-    def broadcast(self, obj):
-        if not self.clients:
+    def broadcast(self, obj, clients=None):
+        clients = self.clients if clients is None else clients
+        if not clients:
             return
         s = json.dumps(obj, separators=(",", ":"))
-        for q in list(self.clients):
+        for q in list(clients):
             if not q.full():  # a tab that cannot keep up drops frames instead of holding memory
                 q.put_nowait(s)
 
@@ -117,6 +119,9 @@ class LiveServer:
         elif method == "GET" and path == "/api/stream":
             await self.sse(writer)
             return
+        elif method == "GET" and path in self.streams:
+            await self.sse(writer, self.streams[path])
+            return
         else:
             try:
                 code, obj = await self.route(method, path, body)
@@ -131,13 +136,15 @@ class LiveServer:
             pass
         writer.close()
 
-    async def sse(self, writer):
+    async def sse(self, writer, clients=None):
         def chunk(b):
             return f"{len(b):x}\r\n".encode() + b + b"\r\n"
 
         q = asyncio.Queue(maxsize=400)
-        self.clients.add(q)
-        q.put_nowait(json.dumps(self.state(), separators=(",", ":")))
+        if clients is None:  # the main stream starts with the state
+            clients = self.clients
+            q.put_nowait(json.dumps(self.state(), separators=(",", ":")))
+        clients.add(q)
         writer.write(b"HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\n"
                      b"Transfer-Encoding: chunked\r\nConnection: keep-alive\r\nX-Accel-Buffering: no\r\n\r\n")
         try:
@@ -153,7 +160,7 @@ class LiveServer:
         except (ConnectionError, asyncio.CancelledError):
             pass
         finally:
-            self.clients.discard(q)
+            clients.discard(q)
             writer.close()
 
     def run(self, port, tasks=()):
