@@ -1,0 +1,102 @@
+# AGENTS.md
+
+Guidance for coding agents that work in this repository. `CLAUDE.md` imports this file.
+
+Hypnos is a hackathon prototype (VexoHacks, 2026-11-14): a channel between a person and their agent
+while the person falls asleep. So far the repo holds the live dashboard for three Bluetooth sensors.
+`README.md` covers setup, how to pair each device, and how to record a night.
+
+## Commands
+
+```bash
+./run.sh                 # the three sensor programs and the page: http://localhost:5300
+./run.sh --sim           # the kit's pretend band, no hardware (only the band has one)
+
+cd sensors && ../.venv/bin/python -m unittest test_live_band                                    # all tests
+cd sensors && ../.venv/bin/python -m unittest test_live_band.Gap.test_lost_samples_become_nan   # one test
+
+cd dashboard && npx tsc --noEmit    # type check; strict, with noUnusedLocals and noUnusedParameters
+```
+
+- The page has no lint, build or test script. `npm run dev` (Vite) is the only one.
+- Run the Python tests from `sensors/`: the modules import each other by bare name.
+- `vexo-open-kit/` must be cloned at the repo root (README, Setup). `live_band.py` puts
+  `vexo-open-kit/python` on `sys.path`. The folder is a reference clone that git ignores, with its
+  own `AGENTS.md`: never edit it and never commit it.
+- Python packages go into `.venv` with `uv` (`requirements.txt` pins them).
+- macOS only: the recorders start `caffeinate`, and `BleLink.known_device()` uses CoreBluetooth.
+
+## Architecture
+
+Four processes, all started by `run.sh`:
+
+| Process | Port | Page prefix | Writes |
+|---|---|---|---|
+| `sensors/live_muse.py` (Muse S) | 5301 | `/api/muse` | `data/muse-<label>/` |
+| `sensors/live_polar.py` (Polar H10) | 5302 | `/api/polar` | `data/polar-<label>/` |
+| `sensors/live_band.py` (Vexo band) | 5303 | `/api/band` | `data/band-<label>/` |
+| `dashboard/` (Vite + React) | 5300 | - | nothing |
+
+**The page is only a view.** The sensor programs hold the Bluetooth links and write the recordings.
+Closing the tab or stopping Vite must never interrupt a night. Keep device and recording logic out of
+`dashboard/`.
+
+### Sensor programs (`sensors/`)
+
+`live_server.py` is the shared base, standard library only:
+
+- `LiveServer`: a hand-written asyncio HTTP server on `127.0.0.1`. `GET /api/stream` is the
+  server-sent-events stream (state first, then whatever the program broadcasts, and a
+  `{"t":"ping"}` each idle second). Every other request goes to `route()`. It refuses a non-loopback
+  `Host` and any `POST` that is not JSON: that is the guard against other web pages commanding a
+  device, so keep it.
+- `BleLink(LiveServer)`: one device kept linked. Scan, connect, reconnect forever with every call
+  bounded by a timeout, a watchdog that drops a silent link, and the remembered device
+  (`data/.recorder-<prefix>.json`). A subclass supplies `match(name)` and `setup(client)`, and may
+  supply `kick()` and `before_disconnect()`. Every notification handler must set `self.last_rx`, or
+  the watchdog drops the link after `QUIET_S`.
+
+`live_muse.py` and `live_polar.py` use all of `BleLink`. `live_band.py` is different: the kit's
+library (`vexo_open.Band`) holds the link and reconnects, so `BandLink` overrides `keep_linked`,
+`disconnect` and `autoconnect`, and uses `BleLink` only for link state, the event log and the
+remembered switch. It does not run the watchdog.
+
+Each program's docstring is the reference for its HTTP API, its recording format and the measured
+protocol facts. Read it before changing a decoder.
+
+Message types on every stream, told apart by `t`: `state` (link and recording), `data` (samples,
+20 Hz batches), `stats` (2 Hz), `event` (a log line), `ping`.
+
+Recording rules that span files:
+
+- A lost sample or packet becomes NaN, so every trace keeps its sample clock.
+- `"final": 1` in a recording's meta is written only by Stop. Ctrl-C, SIGTERM and a crash leave 0.
+- Muse and Polar resume: a restarted program appends to a `final: 0` recording written in the last
+  `RESUME_S` seconds (`resumable()`). The band does not: see the `shortcut:` comment on
+  `BandRecorder`.
+- `run.sh` restarts a program that exits, so a restart mid-night must append, never overwrite.
+
+Numbers written in two places, change both together: the band's motion rate (`RATE` in
+`live_band.py`, `MOTION_HZ` in `dashboard/src/lib/band.ts`) and the ports (each program's `--port`
+default, `dashboard/vite.config.ts`). `BAND` in `live_band.py` is the one place our band number is
+written.
+
+### Page (`dashboard/`)
+
+- `vite.config.ts` proxies `/api/<device>/...` to that program's port as `/api/...`. `cors` is off
+  on purpose.
+- `src/lib/sse.ts`: `Source` wraps one program's `EventSource`, with the online flag (offline after
+  3 s without a message) and its own reconnect. `post()` sends the JSON commands.
+- `src/lib/{band,muse,polar}.ts`: one singleton store for each device. Samples go into `Ring`
+  buffers (`ring.ts`, addressed by absolute sample number) and do not render React. Only `state`,
+  `stats` and `event` messages do, through `useSyncExternalStore`. The canvas components
+  (`Traces`, `Strip`, `Spectrogram`) read the rings in their own animation frames.
+- `src/lib/night.ts`: Start night, Stop night and Connect all. They fan one command out to the
+  three programs under one label.
+
+## Conventions
+
+- Comments say why, and many carry a measurement with its date. Keep that style, and keep those
+  comments when you move code.
+- A known limit is marked `shortcut: <the limit>, <when to upgrade>`.
+- Keys go into `.env`, which git ignores, with `data/`.
