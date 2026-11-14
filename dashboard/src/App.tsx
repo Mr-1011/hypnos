@@ -8,9 +8,10 @@ import { muse, museApi, useMuse } from './lib/muse'
 import { polar, polarApi, usePolar } from './lib/polar'
 import { post } from './lib/sse'
 import { LiveTab } from './tabs/LiveTab'
+import { FocusTab } from './tabs/FocusTab'
 import { DebugTab } from './tabs/DebugTab'
 
-const TABS = ['Live', 'Debug'] as const
+const TABS = ['Live', 'Focus', 'Debug'] as const
 type Tab = (typeof TABS)[number]
 
 function savedTab(): Tab {
@@ -113,7 +114,7 @@ export default function App() {
   }, [tab])
 
   return (
-    <div className={tab === 'Live' ? 'app fit' : 'app'}>
+    <div className={tab === 'Debug' ? 'app' : 'app fit'}>
       <header className="top">
         <div className="brand">
           <svg className="mark" viewBox="0 0 24 24" width={22} height={22} aria-hidden="true">
@@ -132,6 +133,7 @@ export default function App() {
       </header>
       <Cards />
       {tab === 'Live' ? <LiveTab /> : null}
+      {tab === 'Focus' ? <FocusTab /> : null}
       {tab === 'Debug' ? <DebugTab /> : null}
     </div>
   )

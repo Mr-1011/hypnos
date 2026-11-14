@@ -154,6 +154,10 @@ hours still to come are empty tracks. A pinch, or Cmd and a scroll, zooms; a sid
 a click follows, with now in the middle, and a second click goes back to the night. No view goes
 back before the start of the night.
 
+The **Focus** tab shows only that graph, as large as the screen and opened on the minutes around
+now, with the one line of words under it. The numbers and charts of each single device are in the
+**Debug** tab.
+
 **The first four hours of that night are made up, for the demo.** The page opens in the middle of
 a night that began at 00:00: two cycles of sleep, and two moments in them (one with movement and
 a few words, one with movement only; the heart jumps at both). They come from
