@@ -79,7 +79,25 @@ text to Google: tell the people near the band first. One switch at a time: with 
 Microphone switch is locked.
 
 The band hears the Mac's speaker, so the agent does not listen while it speaks: you cannot
-interrupt it. Nothing of the talk is saved.
+interrupt it.
+
+### The brain
+
+The agent keeps what it learns as Markdown in `data/brain/` (git ignores it; it stays on this Mac,
+and the notes go to Google as text with each talk):
+
+- `days/<date>.md`: every line of that day's talk, both sides.
+- `person.md`: the notes about you: what is on your mind, what comes up, what helps. The agent
+  reads them at the start of a talk, so it can connect what you say to what it knows. When a talk
+  ends, Gemini writes them again from the old notes and the day's talk (`agent/reflect.md` says
+  how). You can write into this file by hand; the notes before the last rewrite stay in
+  `person.before.md`.
+
+While the agent is on it also watches how much the wrist (band) and the head (Muse) move. When
+you do not rest, 10 moving seconds in 30, it says one calm sentence without being asked, about
+what the notes say comes up or weighs on you. It waits two minutes after its last words before it
+does that again. These numbers are set for a demo by day, not from a real night
+(`agent/brain.py`, `CALM_GAP_S` in `agent/voice.py`).
 
 ## Record
 

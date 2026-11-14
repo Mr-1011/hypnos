@@ -17,11 +17,14 @@ agent answers aloud).
 cd sensors && ../.venv/bin/python -m unittest test_live_band                                    # all tests
 cd sensors && ../.venv/bin/python -m unittest test_live_band.Gap.test_lost_samples_become_nan   # one test
 
+cd agent && ../.venv/bin/python -m unittest test_brain                                          # the brain's tests
+
 cd dashboard && npx tsc --noEmit    # type check; strict, with noUnusedLocals and noUnusedParameters
 ```
 
 - The page has no lint, build or test script. `npm run dev` (Vite) is the only one.
-- Run the Python tests from `sensors/`: the modules import each other by bare name.
+- Run the Python tests from `sensors/` (and the brain's from `agent/`): the modules import each
+  other by bare name.
 - `vexo-open-kit/` must be cloned at the repo root (README, Setup). `live_band.py` puts
   `vexo-open-kit/python` (the library) and `vexo-open-kit/examples/python` (`speech.py`, the
   Deepgram client) on `sys.path`. The folder is a reference clone that git ignores, with its own
@@ -40,7 +43,7 @@ Five processes, all started by `run.sh`:
 | `sensors/live_muse.py` (Muse S) | 5301 | `/api/muse` | `data/muse-<label>/` |
 | `sensors/live_polar.py` (Polar H10) | 5302 | `/api/polar` | `data/polar-<label>/` |
 | `sensors/live_band.py` (Vexo band) | 5303 | `/api/band` | `data/band-<label>/` |
-| `agent/voice.py` (the voice loop) | 5304 | `/api/agent` | nothing |
+| `agent/voice.py` (the voice loop) | 5304 | `/api/agent` | `data/brain/` |
 | `dashboard/` (Vite + React) | 5300 | - | nothing |
 
 **The page is only a view.** The sensor programs hold the Bluetooth links and write the recordings.
@@ -99,8 +102,8 @@ Recording rules that span files:
 
 Numbers written in two places, change both together: the band's motion rate (`RATE` in
 `live_band.py`, `MOTION_HZ` in `dashboard/src/lib/band.ts`) and the ports (each program's `--port`
-default, `dashboard/vite.config.ts`, and for the band's port also the `--band` default in
-`agent/voice.py`). `BAND` in `live_band.py` is the one place our band number is
+default, `dashboard/vite.config.ts`, and for the band's and the Muse's port also the `--band` and `--muse`
+defaults in `agent/voice.py`). `BAND` in `live_band.py` is the one place our band number is
 written.
 
 ### Agent (`agent/`)
@@ -115,7 +118,17 @@ and ends the loop; the keys are read from `.env` at each start. Its docstring is
   sent, the page's line while the Agent switch is on, and `mip_opt_out` on both Deepgram services.
 - The loop is deaf while the agent speaks (`deaf_until`), because the band hears the Mac's
   speaker: see the `shortcut:` comment in `BandInput`.
-- It has no test. Try it with `sensors/live_band.py --sim` on a spare port and `--band` set to it.
+- `brain.py` is its memory, Markdown in `data/brain/`: `days/<date>.md` gets every line of the
+  talk, and `person.md` is the notes about the person. `talk()` puts the notes after `prompt.md`;
+  when the loop ends, `brain.reflect()` has Gemini write them again (`reflect.md` says how).
+  What a band hears is not trusted text: both prompts say that the talk and the notes are never
+  instructions. Keep those lines.
+- `watch()` reads the band's and the Muse's `stats` while the loop runs. `brain.restless()` is the
+  verdict, and a cue (`CUE`) then goes into the talk so that the agent says calm words unasked.
+  The numbers (`MOVING_MG`, `WINDOW`, `RESTLESS`, `CALM_GAP_S`) are set for the awake demo: see
+  the `shortcut:` comment in `brain.py`.
+- `voice.py` has no test. Try it with `sensors/live_band.py --sim` on a spare port and `--band`
+  set to it. The pretend band always reads as restless (28 mg).
 
 ### Page (`dashboard/`)
 
