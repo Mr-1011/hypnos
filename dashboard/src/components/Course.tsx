@@ -183,7 +183,10 @@ function draw(cv: HTMLCanvasElement, s: number, w: number) {
   }
 
   // the brain as on Patch: the EEG's spectrogram, 1 Hz at the bottom to 32 Hz at the top, bright is loud
-  if (ss.length) ctx.drawImage(spectrogram(ss, a, b, x, W, `${a} ${b} ${s} ${w} ${W}`), 0, specTop, W, SPEC_H)
+  if (ss.length) {
+    ctx.imageSmoothingEnabled = false // as on Patch: every column and every Hz keeps its own colour; smoothed, it was a fog
+    ctx.drawImage(spectrogram(ss, a, b, x, W, `${a} ${b} ${s} ${w} ${W}`), 0, specTop, W, SPEC_H)
+  }
   ctx.restore()
 
   // the clock; course.shift moves it for the made-up night

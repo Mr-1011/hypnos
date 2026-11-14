@@ -14,11 +14,11 @@ const STAGES: [number, Stage][] = [
 
 // What each stage adds to the 1/f of a resting brain: [from Hz, to Hz, share of the colour scale].
 const EEG: Record<Stage, [number, number, number][]> = {
-  awake: [[8, 12, 0.25], [14, 28, 0.1]], // alpha and beta
-  drowsy: [[4, 7, 0.18], [8, 11, 0.1]], // alpha gives way to theta
-  light: [[1, 3, 0.1], [4, 7, 0.12], [12, 14, 0.15]], // theta, and the sleep spindles
-  deep: [[1, 4, 0.4], [9, 32, -0.08]], // slow waves
-  rem: [[4, 7, 0.14], [15, 24, 0.08], [1, 3, -0.06]], // fast again, with no slow waves
+  awake: [[8, 12, 0.32], [14, 28, 0.16]], // alpha and beta
+  drowsy: [[4, 7, 0.22], [8, 11, 0.16]], // alpha gives way to theta
+  light: [[1, 3, 0.12], [4, 7, 0.16], [12, 14, 0.28]], // theta, and the sleep spindles
+  deep: [[1, 4, 0.4], [9, 32, -0.05]], // slow waves
+  rem: [[4, 7, 0.2], [15, 24, 0.14], [1, 3, -0.08]], // fast again, with no slow waves
 }
 
 // 1 at `at` minutes, 0 from `len` minutes before and after it
@@ -28,6 +28,7 @@ const peak = (min: number, at: number, len: number) => Math.max(0, 1 - Math.abs(
 export function simNight(from: number, n: number, stepMs: number, bins: number): Sample[] {
   const out: Sample[] = []
   const eeg = new Float32Array(bins) // the stage's own rhythm; it comes over some minutes, as in a brain
+  const drift = new Float32Array(bins) // each frequency also comes and goes by itself, over a minute or two
   for (let i = 0; i < n; i++) {
     const min = (i * stepMs) / 60_000
     const stage = STAGES.filter(([at]) => at <= min).pop()![1]
@@ -39,11 +40,16 @@ export function simNight(from: number, n: number, stepMs: number, bins: number):
     for (let k = 0; k < bins; k++) {
       const want = EEG[stage].reduce((v, [a, b, add]) => (k + 1 >= a && k + 1 <= b ? v + add : v), 0)
       eeg[k] += (want - eeg[k]) * 0.02
+      drift[k] = drift[k] * 0.98 + 0.07 * (Math.random() - 0.5)
     }
     for (let k = 0; k < bins; k++) {
-      const rhythm = (eeg[Math.max(0, k - 1)] + 2 * eeg[k] + eeg[Math.min(bins - 1, k + 1)]) / 4 // a band has no sharp edge
-      // a body that moves is a stripe over every frequency, as on Patch's spectrogram
-      spec[k] = 255 * (0.5 - (0.28 * Math.log(k + 1)) / Math.log(bins) + rhythm + 0.07 * (Math.random() - 0.5) + 0.5 * (woke + turned))
+      const lo = Math.max(0, k - 1)
+      const hi = Math.min(bins - 1, k + 1)
+      const rhythm = (eeg[lo] + 2 * eeg[k] + eeg[hi]) / 4 + (drift[lo] + 2 * drift[k] + drift[hi]) / 4 // a band has no sharp edge
+      // Loud and slow at the bottom, near silence at 32 Hz: a flatter 1/f was a fog of one colour.
+      // The grain is the spread of a spectrum from 2 s of EEG. A body that moves is a stripe over
+      // every frequency, as on Patch's spectrogram.
+      spec[k] = 255 * (0.6 - (0.55 * Math.log(k + 1)) / Math.log(bins) + rhythm + 0.22 * (Math.random() - 0.5) + 0.5 * (woke + turned))
     }
     out.push({
       t: from + i * stepMs,
