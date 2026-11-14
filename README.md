@@ -82,14 +82,19 @@ and the agent answers. Both sides
 show in the Transcript panel. The voice plays on the Mac's sound output (the band has no
 speaker): the speakers, or AirPods linked to the Mac.
 
-Deepgram hears (Flux, which also decides when you have finished) and speaks (Aura); Gemini writes
-the answers from `agent/prompt.md`, about 4 s after you stop. So the band's sound goes to Deepgram, and what is said goes as
+Deepgram hears (Flux, which also decides when you have finished) and speaks (Flux TTS,
+Alexis in English, speed 0.7, expressivity -2 for calm delivery); Gemini writes
+the answers from `agent/prompt.md`. The earlier Aura loop answered about 4 s after you stopped;
+latency and sound with Alexis still need a live check. So the band's sound goes to Deepgram, and what is said goes as
 text to Google: tell the people near the band first.
 
 The band is made to be worn for weeks and months, and the agent uses that. When something weighs
-on you at night, it answers with an earlier time when the same kind of thing went well: "Four
-weeks ago your presentation went well. Tomorrow can go the same way." It does that in two cases:
-you speak in your sleep, or you say nothing and the body shows stress (see Sleep).
+on you at night, it answers with a helpful behavior from your own earlier words: "You paused
+and explained one number at a time last time." It does that in two cases:
+you speak in your sleep, or you are awake/drowsy before an important upcoming event.
+Unsolicited preparation requires personally stated high stakes and a helpful action in your
+own earlier words; otherwise the agent stays quiet. These are prompt-level rules, not a
+validated prediction of benefit. Movement alone does not identify a worry.
 
 For that the agent works in a loop with tools. It calls the ones it needs, and then it speaks:
 
@@ -106,6 +111,11 @@ for one more situation. The Memory card rings what the tools looked at: the earl
 
 The band hears the Mac's speaker, so the agent does not listen while it speaks: you cannot
 interrupt it.
+
+English everyday conversation simulations are in [agent/simulations.md](agent/simulations.md):
+two fictional demo situations: responding to sleep speech, and preparing for an important event. Use them as
+role-play scripts; they are not loaded into the person's memory or mock calendar/mail.
+The replies are examples, not fixed responses from the live model.
 
 ### The brain
 
