@@ -101,7 +101,7 @@ export default function App() {
   }, [tab])
 
   return (
-    <div className="app">
+    <div className={tab === 'Live' ? 'app fit' : 'app'}>
       <NightBar />
       <Cards />
       <nav className="tabs">
