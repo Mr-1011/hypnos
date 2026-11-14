@@ -167,11 +167,11 @@ keys are read from `.env` at each start. Its docstring is the reference.
   (`Traces`, `Strip`, `Spectrogram`) read the rings in their own animation frames.
 - The page has no record button (the user's rule, 2026-11-14): a recording starts with
   `POST /api/record` on each sensor program (README, Record).
-- The Live tab is one screen with no page scroll (`.app.fit` in `styles.css`): the Arousal graph
+- The Live tab is one screen with no page scroll (`.app.fit` in `styles.css`): the Sleep State graph
   beside the Memory card, whose lower part is the transcript, and three traces under them. Only
   that first row changes its height. A new panel goes on a device tab, or it replaces one on Live.
 - `src/lib/course.ts` samples every 2 s how much the body moves, how fast the brain runs and how
-  much is said, each from 0 to 1, for the Arousal graph (`components/Course.tsx`: a night of 8 h
+  much is said, each from 0 to 1, for the Sleep State graph (`components/Course.tsx`: a night of 8 h
   zoomed out, a pinch zooms, a click follows now). The page holds that history: a reload starts
   the graph again (see the `shortcut:` comment there).
 

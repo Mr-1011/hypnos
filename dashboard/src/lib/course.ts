@@ -2,7 +2,7 @@ import { agent } from './agent'
 import { band } from './band'
 import { muse } from './muse'
 
-// What the Arousal graph of the Live tab draws: every 2 s how much the body moves, how fast the
+// What the Sleep State graph of the Live tab draws: every 2 s how much the body moves, how fast the
 // brain runs and how much is said, each from 0 to 1, from the moment the page opened.
 // shortcut: the page holds this history, so a reload starts the graph again. When a night has to
 // survive the tab, agent/voice.py keeps it (it already follows every sensor) and serves it.

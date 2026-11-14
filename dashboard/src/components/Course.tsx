@@ -197,7 +197,7 @@ export function Course() {
 
   return (
     <div className="course">
-      <canvas ref={ref} onClick={click} role="img" aria-label="Arousal over time: how much the body moves, how fast the brain runs and how much is said" />
+      <canvas ref={ref} onClick={click} role="img" aria-label="Sleep state over time: how much the body moves, how fast the brain runs and how much is said" />
     </div>
   )
 }

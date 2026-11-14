@@ -31,7 +31,7 @@ export function LiveTab() {
 
   return (
     <main className="grid">
-      <Panel title="Arousal" className="span6" tools={<Legend />}>
+      <Panel title="Sleep State" className="span6" tools={<Legend />}>
         <Course />
       </Panel>
       <Memory className="span6">

@@ -159,7 +159,7 @@ h1 {
 }
 
 /* ---------- the Live tab: one screen ---------- */
-/* The top bar, the cards and the traces keep their height. The row of the Arousal graph and the
+/* The top bar, the cards and the traces keep their height. The row of the Sleep State graph and the
    Memory card takes what is left: the graph and the Memory picture fill it, the transcript keeps
    a few lines. A narrow or low window gets the ordinary scrolling page: there the row would be
    too low to read. */
@@ -464,7 +464,7 @@ canvas {
   height: 8px;
 }
 .panel > header .band-legend {
-  padding-top: 0; /* the Arousal graph's names, in the line of its title */
+  padding-top: 0; /* the Sleep State graph's names, in the line of its title */
 }
 
 /* ---------- streams ---------- */
@@ -966,7 +966,7 @@ button.on {
   color: var(--eeg);
 }
 
-/* ---------- the Arousal graph ---------- */
+/* ---------- the Sleep State graph ---------- */
 /* as the spectrogram: the canvas takes whatever height its row gives the panel */
 .course {
   position: relative;
