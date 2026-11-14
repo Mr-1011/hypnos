@@ -92,10 +92,13 @@ select:focus-visible {
   gap: 10px;
   flex-wrap: wrap;
 }
+/* the name in thin capitals set wide, as cut into stone (the user's rule, 2026-11-14) */
 h1 {
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: 0.01em;
+  font-family: 'Avenir Next', Avenir, 'Helvetica Neue', sans-serif;
+  font-size: 17px;
+  font-weight: 200;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
 }
 .pill {
   display: inline-flex;

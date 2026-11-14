@@ -117,9 +117,7 @@ export default function App() {
     <div className={tab === 'Debug' ? 'app' : 'app fit'}>
       <header className="top">
         <div className="brand">
-          <svg className="mark" viewBox="0 0 24 24" width={22} height={22} aria-hidden="true">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="#e0b64d" />
-          </svg>
+          <img className="mark" src="/logo.svg" width={28} height={28} alt="" />
           <h1>Hypnos</h1>
         </div>
         <nav className="tabs">
