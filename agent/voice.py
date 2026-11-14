@@ -53,10 +53,11 @@ sys.path.insert(0, str(ROOT / "vexo-open-kit" / "python"))  # the kit's library:
 
 import aiohttp  # noqa: E402
 from dotenv import dotenv_values  # noqa: E402
+from google import genai  # noqa: E402
 from loguru import logger  # noqa: E402
 from pipecat.frames.frames import (  # noqa: E402
     BotStartedSpeakingFrame, BotStoppedSpeakingFrame, InputAudioRawFrame, InterimTranscriptionFrame,
-    LLMMessagesAppendFrame, LLMRunFrame)
+    LLMContextFrame, LLMMessagesAppendFrame, LLMRunFrame)
 from pipecat.pipeline.pipeline import Pipeline  # noqa: E402
 from pipecat.pipeline.runner import PipelineRunner  # noqa: E402
 from pipecat.pipeline.worker import PipelineWorker  # noqa: E402
@@ -150,13 +151,32 @@ class Guesses(FrameProcessor):
         await self.push_frame(frame, direction)
 
 
+class Sense(FrameProcessor):
+    """Before Gemini answers, the decisions model looks at the moment (brain.sense): which notes the
+    last words touch, and the state the person seems to be in. Gemini gets that as one more line."""
+
+    def __init__(self, sense):
+        super().__init__()
+        self.sense = sense
+
+    async def process_frame(self, frame, direction):
+        await super().process_frame(frame, direction)
+        if isinstance(frame, LLMContextFrame):
+            talk = [m for m in frame.context.messages if isinstance(m.get("content"), str)][-6:]
+            hint = await self.sense("\n".join(f"{'voice' if m['role'] == 'assistant' else 'person'}: {m['content']}" for m in talk))
+            frame.context.add_message({"role": "user", "content": hint})
+        await self.push_frame(frame, direction)
+
+
 class Voice(LiveServer):
     name = "Agent"
 
     def __init__(self, band_url, movers):
         super().__init__()
         self.band_url = band_url
-        self.movers = movers  # the event streams that carry a movement number: the band's and the Muse's
+        self.movers = movers  # where on the body -> the event stream of the program that measures there
+        self.seen = {}        # where on the body -> (its last movement numbers, its last heart rate)
+        self.sensed = None    # brain.sense's last answer, for the page
         self.spoke = 0.0      # time.time() of the agent's last words
         self.worker = None   # the running pipeline; not None = the agent is on
         self.loop = None     # the task that runs it
@@ -164,10 +184,11 @@ class Voice(LiveServer):
         self.lines = collections.deque(maxlen=50)  # [utc_ms, "you" | "agent", what was said]
         self.day = None      # the date this talk is filed under
         self.heard = False   # the person said something in this talk: there is something to write notes from
-        self.google = None   # the key the talk started with, for the notes at its end
+        self.google = None   # Google's client for this talk: the decisions model, and the notes at its end
 
     def state(self):
-        return {"t": "state", "on": bool(self.worker), "err": self.err, "lines": list(self.lines), "brain": brain.graph()}
+        return {"t": "state", "on": bool(self.worker), "err": self.err, "lines": list(self.lines), "brain": brain.graph(),
+                "sense": self.sensed}
 
     def said(self, who, text, final=True):
         ts = int(time.time() * 1000)
@@ -194,7 +215,8 @@ class Voice(LiveServer):
         if missing:
             return f"The agent needs {' and '.join(missing)} in .env (env.example has the form)."
         print(NOTE, flush=True)  # before any sound is sent
-        self.day, self.heard, self.google = brain.today(), False, keys["GOOGLE_API_KEY"]
+        self.day, self.heard, self.sensed = brain.today(), False, None
+        self.google = genai.Client(api_key=keys["GOOGLE_API_KEY"], http_options={"api_version": "v1beta"})  # v1beta: the decisions model
         self.spoke = time.time()
         about = brain.notes()
         system = (HERE / "prompt.md").read_text() + time.strftime("\nToday is %A, %Y-%m-%d.\n") + (
@@ -218,7 +240,7 @@ class Voice(LiveServer):
         speaker = LocalAudioTransport(LocalAudioTransportParams(audio_out_enabled=True))
         self.worker = PipelineWorker(
             Pipeline([BandInput(self.band_url), stt, Guesses(lambda text: self.said("you", text, final=False)),
-                      you, llm, tts, speaker.output(), agent]),
+                      you, Sense(self.sense), llm, tts, speaker.output(), agent]),
             idle_timeout_secs=None)  # a quiet night is no reason to stop
 
         @self.worker.event_handler("on_pipeline_error")
@@ -232,7 +254,24 @@ class Voice(LiveServer):
         self.push_state()
         return None
 
-    async def watch(self, url):
+    async def sense(self, talk):
+        """Ask the decisions model about this moment. The answer goes to the page, and comes back as the line for Gemini."""
+        body = []
+        for where, (moves, bpm) in self.seen.items():
+            got = [m for m in moves if m is not None]
+            if got:
+                body.append(f"{where} movement in the last {len(got) // 2} s, in mg (under {brain.MOVING_MG} is still): "
+                            f"mean {sum(got) / len(got):.0f}, most {max(got):.0f}")
+            if bpm:
+                body.append(f"heart rate at the {where}: {bpm:.0f} a minute")
+        self.sensed = await brain.sense(self.google, talk, time.strftime("It is %H:%M. Sensors: ") + ("; ".join(body) or "none") + ".")
+        self.push_state()
+        labels = {n["id"]: n["label"] for n in brain.graph()["nodes"]}
+        touched = "; ".join(labels[i] for i in self.sensed["about"])
+        return ("(notes) " + (f"Their last words touch: {touched}. " if touched else "") + f"They seem {self.sensed['state']}"
+                + (" and worried." if self.sensed["worried"] > 0.6 else "."))
+
+    async def watch(self, where, url):
         """One program's movement numbers. A body that does not rest gets calm words, unasked."""
         moves = collections.deque(maxlen=brain.WINDOW)
         while True:
@@ -245,6 +284,7 @@ class Voice(LiveServer):
                             continue
                         m = json.loads(line[6:])
                         moves.append(m["move"] if "move" in m else (m.get("motion") or {}).get("move"))  # band | Muse
+                        self.seen[where] = (moves, m["bpm"] if "bpm" in m else (m.get("hr") or {}).get("bpm"))  # Polar | Muse
                         if brain.restless(moves) and time.time() - self.spoke > CALM_GAP_S:
                             self.spoke = time.time()
                             moves.clear()
@@ -255,7 +295,7 @@ class Voice(LiveServer):
             await asyncio.sleep(1)  # that program is not up, or it restarts
 
     async def run_loop(self):
-        watchers = [asyncio.create_task(self.watch(url)) for url in self.movers]
+        watchers = [asyncio.create_task(self.watch(where, url)) for where, url in self.movers.items()]
         try:
             runner = PipelineRunner(handle_sigint=False)
             await runner.add_workers(self.worker)
@@ -295,10 +335,12 @@ def main():
     ap.add_argument("--port", type=int, default=5304)
     ap.add_argument("--band", default="http://127.0.0.1:5303", help="where live_band.py answers")
     ap.add_argument("--muse", default="http://127.0.0.1:5301", help="where live_muse.py answers")
+    ap.add_argument("--polar", default="http://127.0.0.1:5302", help="where live_polar.py answers")
     args = ap.parse_args()
     logger.remove()
     logger.add(sys.stderr, level="INFO")  # Pipecat's default prints every frame
-    Voice(args.band + "/api/audio", [args.band + "/api/stream", args.muse + "/api/stream"]).run(args.port)
+    Voice(args.band + "/api/audio", {"wrist": args.band + "/api/stream", "head": args.muse + "/api/stream",
+                                     "chest": args.polar + "/api/stream"}).run(args.port)
 
 
 if __name__ == "__main__":

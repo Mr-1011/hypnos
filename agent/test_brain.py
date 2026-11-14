@@ -2,9 +2,11 @@
 
     cd agent && ../.venv/bin/python -m unittest test_brain
 """
+import asyncio
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace as NS
 from unittest import mock
 
 import brain
@@ -41,3 +43,17 @@ class Brain(unittest.TestCase):
             self.assertIn(["Days/2026-11-14: a long day", "2026-11-14"], g["links"])
             self.assertIn(["person", "2026-11-14"], g["links"])
             self.assertNotIn(["person", "2026-11-15"], g["links"])
+
+    def test_sense_asks_about_every_note_and_names_the_ones_touched(self):
+        asked = {}
+
+        async def create(model, input, questions):  # the decisions model: sure of the pitch, not of the walk
+            asked.update(questions)
+            return NS(answers={k: NS(choice="drowsy") if k == "state" else NS(noul=0.9 if "pitch" in q["instructions"] else 0.1)
+                               for k, q in questions.items()})
+
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(brain, "DIR", Path(d)):
+            (Path(d) / "person.md").write_text("## Coming up\n- The pitch, 2026-11-15\n\n## What helps\n- The walk\n\n## Days\n- 2026-11-14: long\n")
+            got = asyncio.run(brain.sense(NS(aio=NS(decisions=NS(create=create))), "person: I am not ready.", "Sensors: none."))
+        self.assertEqual(len(asked), 4)  # two notes, worried, state: the Days lines are not asked about
+        self.assertEqual(got, {"about": ["Coming up/The pitch, 2026-11-15"], "worried": 0.1, "state": "drowsy"})

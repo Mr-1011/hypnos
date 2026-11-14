@@ -15,8 +15,6 @@ import re
 import time
 from pathlib import Path
 
-from google import genai
-
 HERE = Path(__file__).resolve().parent
 DIR = HERE.parent / "data" / "brain"
 
@@ -25,6 +23,16 @@ DIR = HERE.parent / "data" / "brain"
 MOVING_MG = 20  # band 61, 2026-11-14: 1 mg on the desk, 4 to 8 mg held still, 41 mg in a small move
 WINDOW = 60     # the movement numbers one verdict looks at: 30 s, at 2 a second
 RESTLESS = 20   # that many of them moving: 10 of the 30 s
+
+# Google's decisions model: one input, many closed questions, calibrated answers and no text.
+# 0.7 s for two questions on 2026-11-14.
+SENSE = "gemini-decision-1"
+STATES = {  # a guess from words and movement, not a sleep stage: nothing here was held against a sleep lab
+    "awake": "speaks in whole sentences, or moves like a person who is up",
+    "drowsy": "lies still; the words come slowly, few or unclear",
+    "asleep": "has been still and silent for minutes",
+    "restless": "lies in bed and moves a lot",
+}
 
 
 def today():
@@ -75,10 +83,23 @@ def restless(moves):
     return sum(1 for m in moves if m is not None and m > MOVING_MG) >= RESTLESS
 
 
-async def reflect(key, model, day):
+async def sense(client, said, body):
+    """What the decisions model makes of this moment: the notes that the person's words touch,
+    whether they sound worried, and the state they seem to be in. said: the last lines of the
+    talk. body: the sensors' numbers in words. client: a genai.Client, held by the caller."""
+    lines = [n for n in graph()["nodes"] if n["kind"] == "line" and not n["id"].startswith("Days/")]
+    questions = {f"n{i}": {"type": "noul", "instructions": f"The person's last words are about this: {n['label']}"}
+                 for i, n in enumerate(lines)}
+    questions["worried"] = {"type": "noul", "instructions": "The person sounds worried or tense."}
+    questions["state"] = {"type": "choice", "instructions": "The state the person is in right now.", "criteria": STATES}
+    a = (await client.aio.decisions.create(model=SENSE, input=f"{said}\n\n{body}", questions=questions)).answers
+    return {"about": [n["id"] for i, n in enumerate(lines) if a[f"n{i}"].noul > 0.5],
+            "worried": round(a["worried"].noul, 2), "state": a["state"].choice}
+
+
+async def reflect(client, model, day):
     """Write the notes again, from the notes so far and the day's talk."""
     old = notes()
-    client = genai.Client(api_key=key)  # under a name: unnamed, it is collected and closed mid-request
     r = await client.aio.models.generate_content(
         model=model, config={"system_instruction": (HERE / "reflect.md").read_text()},
         contents=f"<notes>\n{old}</notes>\n\n<talk>\n{(DIR / 'days' / f'{day}.md').read_text()}</talk>")
