@@ -185,8 +185,11 @@ keys are read from `.env` at each start. Its docstring is the reference.
 - The Live tab is one screen with no page scroll (`.app.fit` in `styles.css`): the Sleep State graph
   beside the Memory card, whose lower part is the transcript, and three traces under them. Only
   that first row changes its height. The Focus tab is also one screen, and it shows only how the
-  agent works (the user's rules, 2026-11-14): the Memory card's picture, drawn twice as large
-  (`<Memory scale={2}>`), and the transcript's line, with no device cards, no frame and no title.
+  agent works (the user's rules, 2026-11-14): the Memory card's picture in detail
+  (`<Memory detail>`: small dots with room between them, as a notes app draws its graph, and
+  every dot that is inside another as its satellite), and the transcript's line, with no device
+  cards and no frame. A dot's name is short, of whole words, with no "..." and no colon (`name()`
+  in `Memory.tsx`): the line under the picture has the whole text.
   What was each device's own tab is a part of the Debug tab, one long page with no tabs in it
   (`tabs/DebugTab.tsx`; the user's rule, 2026-11-14). A new panel goes into one of those parts, or
   it replaces one on Live.

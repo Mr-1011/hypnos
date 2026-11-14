@@ -23,13 +23,41 @@ function Demo() {
 }
 
 const ZOOM = 1.4 // how much larger the picture is about a dot that was clicked
+const SPREAD = 1.7 // the detailed picture has that many times the room between its dots
+const MAX = 28 // letters in a dot's name
+const LITTLE = new Set('a an the of to in on at for and or but if with about my your our their that this is are was were be not by from as it so i you we she he they'.split(' '))
+
+// A dot's name, as a note has its title in a notes app: short, whole words, no "..." and no colon
+// (the user's rule, 2026-11-14). The line under the picture has all of the text of the dot under
+// the pointer.
+function name(n: BrainNode): string {
+  if (n.kind === 'day') return new Date(`${n.label}T12:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  let s = n.label
+    .replace(/^[\d: -]+/, '') // its date and time: the link to the day shows them
+    .replace(/^(you|agent|heard): /, '') // a day's line: who said it
+    .replace(/\s*\(\d{4}-\d{2}-\d{2}\)/g, '')
+    .replace(/["“”]/g, '')
+  const colon = s.indexOf(': ')
+  if (colon > 0 && colon <= MAX) s = s.slice(0, colon) // "Finals: the pitch to the judges" is Finals, and a mail is who it is from
+  s = s.replace(/^(.{8,}?) (while|before|after|because|when|but) .*/, '$1') // the first part of a long sentence
+  const cut = s.lastIndexOf(' ', MAX)
+  if (s.length > MAX && cut > 0) {
+    const words = s.slice(0, cut).split(' ')
+    while (words.length > 1 && LITTLE.has(words[words.length - 1].toLowerCase())) words.pop() // a name does not end in "the"
+    s = words.join(' ')
+  }
+  s = s.replace(/[.,;:!?]+$/, '')
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
 
 // What the agent keeps about the person (agent/brain.py), drawn the way a notes app draws its
 // graph: every note and every day is a dot, and a line joins what belongs together. The dots push
 // each other apart and the links pull, until the picture rests. children: the lower part of the
-// card, the transcript. scale: how many times larger everything is drawn (the Focus tab).
-export function Memory({ className = '', scale = 1, children }: { className?: string; scale?: number; children?: ReactNode }) {
+// card, the transcript. detail: the picture of the Focus tab, as a notes app draws a vault: small
+// dots with room between them, and every dot that is inside another is there too, as its satellite.
+export function Memory({ className = '', detail = false, children }: { className?: string; detail?: boolean; children?: ReactNode }) {
+  const scale = detail ? SPREAD : 1 // the dots are laid out in a smaller picture and drawn that much further apart
   const ag = useAgent()
   // the agent sends its whole state for every change: the same graph again must not move a dot
   const sent = ag.state?.brain
@@ -55,10 +83,12 @@ export function Memory({ className = '', scale = 1, children }: { className?: st
   const [zoomed, setZoomed] = useState<string | null>(null)
   const holds = useMemo(() => new Set((brain?.nodes ?? []).map((n) => n.in)), [brain])
   const shown = useMemo(() => {
-    const nodes = (brain?.nodes ?? []).filter((n) => !n.in || open.has(n.in))
+    const nodes = (brain?.nodes ?? []).filter((n) => detail || !n.in || open.has(n.in))
     const ids = new Set(nodes.map((n) => n.id))
     return { nodes, links: (brain?.links ?? []).filter(([a, b]) => ids.has(a) && ids.has(b)) }
-  }, [brain, open])
+  }, [brain, open, detail])
+  // the satellites of the detailed picture: small, near their dot, and they push less
+  const sat = useMemo(() => new Set(detail ? (brain?.nodes ?? []).filter((n) => n.in).map((n) => n.id) : []), [brain, detail])
 
   const near = useMemo(() => {
     const m = new Map<string, Set<string>>()
@@ -93,13 +123,14 @@ export function Memory({ className = '', scale = 1, children }: { className?: st
     let heat = quiet ? 1 : 0.6
     let raf = 0
     const ps = shown.nodes.map((n) => p.get(n.id)!)
+    const push = shown.nodes.map((n) => (sat.has(n.id) ? 0.2 : 1))
     const tick = () => {
       for (let i = 0; i < ps.length; i++) {
         for (let j = i + 1; j < ps.length; j++) {
           const dx = ps[i].x - ps[j].x
           const dy = ps[i].y - ps[j].y
           const d2 = dx * dx + dy * dy + 1
-          const f = 5200 / d2 / Math.sqrt(d2)
+          const f = (5200 * push[i] * push[j]) / d2 / Math.sqrt(d2)
           ps[i].vx += dx * f
           ps[i].vy += dy * f
           ps[j].vx -= dx * f
@@ -111,7 +142,8 @@ export function Memory({ className = '', scale = 1, children }: { className?: st
         const B = p.get(b)!
         const dx = B.x - A.x
         const dy = B.y - A.y
-        const f = (0.05 * (Math.hypot(dx, dy) - 84)) / (Math.hypot(dx, dy) + 1)
+        const near = sat.has(a) || sat.has(b) // a satellite is held near its dot, on a short and stiff link
+        const f = ((near ? 0.12 : 0.05) * (Math.hypot(dx, dy) - (near ? 22 : 84))) / (Math.hypot(dx, dy) + 1)
         A.vx += dx * f
         A.vy += dy * f
         B.vx -= dx * f
@@ -145,16 +177,18 @@ export function Memory({ className = '', scale = 1, children }: { className?: st
       setFrame((n) => n + 1)
     } else raf = requestAnimationFrame(frame)
     return () => cancelAnimationFrame(raf)
-  }, [brain, shown, near, W, H])
+  }, [brain, shown, near, sat, W, H])
 
   const nodes = shown.nodes.filter((n) => pos.current.has(n.id))
   const lit = (id: string) => !hot || id === hot || !!near.get(hot)?.has(id)
   const hotNode = nodes.find((n) => n.id === hot)
   // the clicked dot goes to the middle, as far as the picture's edges allow: nothing beside the picture is shown
   const at = zoomed ? pos.current.get(zoomed) : undefined
-  const view = at ? `translate(${clamp(W / 2 - at.x * ZOOM, W - W * ZOOM, 0)}px, ${clamp(H / 2 - at.y * ZOOM, H - H * ZOOM, 0)}px) scale(${ZOOM})` : 'translate(0px, 0px) scale(1)'
+  const PW = W * scale // the picture in pixels
+  const PH = H * scale
+  const view = at ? `translate(${clamp(PW / 2 - at.x * scale * ZOOM, PW - PW * ZOOM, 0)}px, ${clamp(PH / 2 - at.y * scale * ZOOM, PH - PH * ZOOM, 0)}px) scale(${ZOOM})` : 'translate(0px, 0px) scale(1)'
   const click = (id: string) => {
-    if (holds.has(id)) toggle(id)
+    if (!detail && holds.has(id)) toggle(id) // the detailed picture has every dot open
     setZoomed((z) => (z === id ? null : id))
   }
 
@@ -170,24 +204,26 @@ export function Memory({ className = '', scale = 1, children }: { className?: st
       }
     >
       <div className="memory">
-        <svg ref={svg} viewBox={`0 0 ${W} ${H}`} role="img" aria-label="What the agent remembers about the person, as a graph of notes and days" onClick={() => setZoomed(null)}>
+        <svg ref={svg} viewBox={`0 0 ${PW} ${PH}`} role="img" aria-label="What the agent remembers about the person, as a graph of notes and days" onClick={() => setZoomed(null)}>
          <g className="view" style={{ transform: view }}>
           {shown.links.map(([a, b]) => {
             const A = pos.current.get(a)
             const B = pos.current.get(b)
-            return A && B ? <line key={`${a}|${b}`} x1={A.x} y1={A.y} x2={B.x} y2={B.y} className={hot && (a === hot || b === hot) ? 'hot' : hot ? 'dim' : ''} /> : null
+            return A && B ? <line key={`${a}|${b}`} x1={A.x * scale} y1={A.y * scale} x2={B.x * scale} y2={B.y * scale} className={`${sat.has(a) || sat.has(b) ? 'in' : ''} ${hot && (a === hot || b === hot) ? 'hot' : hot ? 'dim' : ''}`} /> : null
           })}
           {nodes.map((n) => {
             const q = pos.current.get(n.id)!
-            // near counts the dots inside too: a dot that holds much is big, also while it is closed
-            const r = n.kind === 'person' ? 7 : 3 + 1.4 * Math.sqrt(near.get(n.id)?.size ?? 0)
-            // a note's own words are long: the dot shows their start, the line below the picture shows all
-            const whole = (n.kind !== 'line' && n.kind !== 'item' && !n.in) || !!sense?.about.includes(n.id)
-            // an item begins with its date: the link to the day shows that, so the dot shows the words.
-            // A day's line begins with its time and who said it
-            const words = n.kind === 'item' ? n.label.replace(/^[\d: -]+/, '') : n.kind === 'said' ? n.label.replace(/^[\d:]+ \w+: /, '') : n.label
-            const more = holds.has(n.id)
-            const label = n.id === hot && !whole ? '' : whole || words.length <= 22 ? words : `${words.slice(0, 20)}...`
+            const x = q.x * scale
+            const y = q.y * scale
+            const touched = !!sense?.about.includes(n.id)
+            // near counts the dots inside too: a dot that holds much is big, also while it is closed.
+            // The detailed picture has small dots: more of them fit, and the lines show
+            const links = Math.sqrt(near.get(n.id)?.size ?? 0)
+            const r = sat.has(n.id) ? 2.2 : detail ? (n.kind === 'person' ? 6 : 2.6 + 0.9 * links) : n.kind === 'person' ? 7 : 3 + 1.4 * links
+            const more = !detail && holds.has(n.id)
+            // a satellite has its name only while the pointer or the zoom is on it: a hundred names
+            // at once are no picture, and a day's twelve lie on each other
+            const label = !sat.has(n.id) || touched || n.id === hot || n.id === zoomed ? name(n) : ''
             return (
               <g
                 key={n.id}
@@ -203,11 +239,11 @@ export function Memory({ className = '', scale = 1, children }: { className?: st
                 }}
                 onKeyDown={(e: KeyboardEvent<SVGGElement>) => e.key === 'Enter' && click(n.id)}
               >
-                <circle cx={q.x} cy={q.y} r={r + 6} fill="transparent" />
+                <circle cx={x} cy={y} r={r + 6} fill="transparent" />
                 {/* what the person's last words touch, says the decisions model */}
-                {sense?.about.includes(n.id) ? <circle className="touched" cx={q.x} cy={q.y} r={r + 5} stroke={COLOR[n.kind]} /> : null}
-                <circle cx={q.x} cy={q.y} r={r} fill={COLOR[n.kind]} />
-                <text x={q.x} y={q.y + r + 11} textAnchor="middle">
+                {touched ? <circle className="touched" cx={x} cy={y} r={r + 5} stroke={COLOR[n.kind]} /> : null}
+                <circle cx={x} cy={y} r={r} fill={COLOR[n.kind]} />
+                <text x={x} y={y + r + (detail ? 14 : 11)} textAnchor="middle">
                   {label}
                 </text>
               </g>

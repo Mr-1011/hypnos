@@ -228,6 +228,19 @@ h1 {
   font-size: 20px;
   line-height: 28px;
 }
+/* the detailed picture: its names are a little larger than in the card, and each has an edge in
+   the page's colour, so a line that runs behind a name does not cross it out */
+.focus .memory text {
+  font-size: 11px;
+  paint-order: stroke;
+  stroke: var(--bg);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+.focus .memory g.person text,
+.focus .memory g.head text {
+  font-size: 13px;
+}
 .focus .memory-said {
   border-top: none;
   background: var(--bg);
@@ -1011,6 +1024,10 @@ button.on {
 .memory line {
   stroke: var(--line-strong);
   stroke-width: 1;
+}
+/* the line to a satellite of the detailed picture: fainter than a line between two notes */
+.memory line.in {
+  stroke: var(--line);
 }
 .memory line.hot {
   stroke: var(--text-2);

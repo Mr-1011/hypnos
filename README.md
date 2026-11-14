@@ -155,8 +155,9 @@ hours still to come are empty tracks. A pinch, or Cmd and a scroll, zooms; a sid
 a click follows, with now in the middle, and a second click goes back to the night. No view goes
 back before the start of the night.
 
-The **Focus** tab shows only how the agent works: the picture of the Memory card, as large as
-the screen, with the one line of words under it, and no device over it. The numbers and charts of
+The **Focus** tab shows only how the agent works: the picture of the Memory card in detail, as
+large as the screen, with the one line of words under it, and no device over it. The dots are
+small there, and what a day or an item holds is a ring of smaller dots around it. The numbers and charts of
 each single device are in the **Debug** tab, one long page.
 
 **The first four hours of that night are made up, for the demo.** The page opens in the middle of
