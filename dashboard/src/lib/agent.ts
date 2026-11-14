@@ -21,6 +21,11 @@ export interface AgentState {
   // agent/brain.py sense(): what the decisions model made of the last moment. about: ids of the
   // notes the person's words touch; worried: 0 to 1
   sense: { about: string[]; worried: number } | null
+  activity?: {
+    turn: number
+    phase: 'idle' | 'processing' | 'complete' | 'quiet' | 'error'
+    steps: { id: number; tool: 'sense' | 'recall' | 'body' | 'stay_quiet'; status: 'running' | 'done' | 'failed' | 'cancelled' }[]
+  }
   // agent/sleep.py Night.now(): the stage of the last half minute (awake, drowsy, light, deep, rem),
   // the cycle (0 before sleep), minutes since sleep began, and whether the Muse's EEG was in it
   sleep: { stage: string | null; cycle: number; asleep_min: number | null; eeg: boolean }

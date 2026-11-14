@@ -17,7 +17,7 @@ agent answers aloud).
 cd sensors && ../.venv/bin/python -m unittest test_live_band                                    # all tests
 cd sensors && ../.venv/bin/python -m unittest test_live_band.Gap.test_lost_samples_become_nan   # one test
 
-cd agent && ../.venv/bin/python -m unittest test_brain test_sleep                               # the agent's tests
+cd agent && ../.venv/bin/python -m unittest test_brain test_sleep test_activity                 # the agent's tests
 
 cd dashboard && npx tsc --noEmit    # type check; strict, with noUnusedLocals and noUnusedParameters
 ```
@@ -146,6 +146,9 @@ keys are read from `.env` at each start. Its docstring is the reference.
   What a tool looked at goes into the agent's `state` as `sense` (`touch()`), and the Memory card
   rings it. `skills/` holds the steps for a situation, one Markdown file each, and `talk()` puts
   them after `prompt.md`.
+- `activity.py` tracks observable tool calls per turn, including parallel calls and cancellation.
+  `voice.py` sends `activity` in state; Memory shows its status and animates retrieved graph links
+  only while processing. Never label this as private model reasoning or all matches as used evidence.
 - What the agent is for (the user's rule, 2026-11-14): it answers what weighs on the person with
   an earlier time when the same kind of thing went well, in one or two sentences. Two cases: the
   person speaks in their sleep, and sensor-triggered support for an important upcoming event, including during sleep.

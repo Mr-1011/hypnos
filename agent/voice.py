@@ -95,6 +95,7 @@ from pipecat.transports.base_transport import TransportParams  # noqa: E402
 from pipecat.transports.local.audio import LocalAudioTransport, LocalAudioTransportParams  # noqa: E402
 from vexo_open.audio import PcmDecoder  # noqa: E402
 
+from activity import Activity  # noqa: E402
 import brain  # noqa: E402
 import sleep  # noqa: E402
 from live_server import LiveServer  # noqa: E402
@@ -188,6 +189,7 @@ class Voice(LiveServer):
         self.eeg = []         # this epoch's EEG: the Muse's band shares, one entry for each of its stats
         self.night = sleep.Night()
         self.sensed = None    # what the agent looked at in this turn (touch), for the page
+        self.activity = Activity(self.push_state)
         self.spoke = 0.0      # time.time() of the agent's last words
         self.worker = None   # the running pipeline; not None = the agent is on
         self.loop = None     # the task that runs it
@@ -198,7 +200,7 @@ class Voice(LiveServer):
 
     def state(self):
         return {"t": "state", "on": bool(self.worker), "err": self.err, "lines": list(self.lines), "brain": brain.graph(),
-                "sense": self.sensed, "sleep": self.night.now()}
+                "sense": self.sensed, "activity": self.activity.state(), "sleep": self.night.now()}
 
     def said(self, who, text, final=True):
         ts = int(time.time() * 1000)
@@ -210,6 +212,8 @@ class Voice(LiveServer):
             if who == "agent":
                 self.spoke = time.time()
         self.broadcast({"t": "text", "ts": ts, "who": who, "text": text, "final": int(final)})
+        if final and who == "agent":
+            self.activity.finish("complete")  # send text before the state that already contains it
 
     def asleep(self):
         """The stage of sleep in words, for Gemini and for the decisions model."""
@@ -265,6 +269,7 @@ class Voice(LiveServer):
         @you.event_handler("on_user_turn_stopped")
         async def person_finished(aggregator, strategy, message):
             self.sensed = None  # a new turn: the Memory card rings what the agent looks at now
+            self.activity.begin()
             self.said("you", message.content)
 
         @agent.event_handler("on_assistant_turn_stopped")
@@ -280,8 +285,9 @@ class Voice(LiveServer):
         @self.worker.event_handler("on_pipeline_error")
         async def failed(worker, frame):  # a refused key, no credit left, no internet: the page says why it is silent
             self.err = str(frame.error)[:300]
-            self.push_state()
+            self.activity.finish("error")
 
+        self.activity.begin()
         await self.worker.queue_frames([LLMRunFrame()])
         self.err = None
         self.loop = asyncio.create_task(self.run_loop())
@@ -316,39 +322,44 @@ class Voice(LiveServer):
         Args:
             words: A few words for the kind of thing, with other words for the same: "presentation pitch talk".
         """
-        found = brain.recall(words.split(), self.day)
-        self.touch(list(dict.fromkeys(day for day, _ in found)))
-        today = datetime.date.fromisoformat(self.day)
-        await params.result_callback("\n".join(
-            f"{day} ({(today - datetime.date.fromisoformat(day)).days} days ago) {line}" for day, line in found)
-            or "The earlier days hold nothing about that.")
+        async with self.activity.tool("recall"):
+            found = brain.recall(words.split(), self.day)
+            self.touch(list(dict.fromkeys(day for day, _ in found)))
+            today = datetime.date.fromisoformat(self.day)
+            await params.result_callback("\n".join(
+                f"{day} ({(today - datetime.date.fromisoformat(day)).days} days ago) {line}" for day, line in found)
+                or "The earlier days hold nothing about that.")
 
     async def sense(self, params):
         """Ask the decisions model about the person's last words: which of your notes, calendar items and
         mails they touch, and whether the person sounds worried. Use it when the person speaks."""
-        talk = [m for m in params.context.messages
-                if isinstance(m, dict) and m.get("role") in ("user", "assistant") and isinstance(m.get("content"), str)][-6:]
-        got = await brain.sense(self.google, "\n".join(
-            f"{'voice' if m['role'] == 'assistant' else 'person'}: {m['content']}" for m in talk), self.felt())
-        self.touch(got["about"], got["worried"])
-        labels = {n["id"]: n["label"] for n in brain.graph()["nodes"]}
-        await params.result_callback(
-            (f"Their words touch: {'; '.join(labels[i] for i in got['about'])}. " if got["about"] else "Their words touch nothing you know of. ")
-            + ("They sound worried." if got["worried"] > 0.6 else "They do not sound worried."))
+        async with self.activity.tool("sense"):
+            talk = [m for m in params.context.messages
+                    if isinstance(m, dict) and m.get("role") in ("user", "assistant") and isinstance(m.get("content"), str)][-6:]
+            got = await brain.sense(self.google, "\n".join(
+                f"{'voice' if m['role'] == 'assistant' else 'person'}: {m['content']}" for m in talk), self.felt())
+            self.touch(got["about"], got["worried"])
+            labels = {n["id"]: n["label"] for n in brain.graph()["nodes"]}
+            await params.result_callback(
+                (f"Their words touch: {'; '.join(labels[i] for i in got['about'])}. " if got["about"] else "Their words touch nothing you know of. ")
+                + ("They sound worried." if got["worried"] > 0.6 else "They do not sound worried."))
 
     async def body(self, params):
         """How the person's body is now: the stage of sleep and the cycle of the night, how much the wrist
         and the head move, and the heart rate. A cue has these numbers in it already."""
-        await params.result_callback(self.felt())
+        async with self.activity.tool("body"):
+            await params.result_callback(self.felt())
 
     async def stay_quiet(self, params):
         """Say nothing now. Use it alone, when words would wake the person or a cue needs none."""
-        await params.result_callback("You said nothing.", properties=FunctionCallResultProperties(run_llm=False))
+        async with self.activity.tool("stay_quiet"):
+            await params.result_callback("You said nothing.", properties=FunctionCallResultProperties(run_llm=False))
 
     async def cue(self, what):
         """The sensors make the agent speak: one line into the talk, as if it had been said, with the body's numbers."""
         self.spoke = time.time()
         self.sensed = None  # a new turn: the Memory card rings what the agent looks at now
+        self.activity.begin()
         brain.note(self.day, int(time.time() * 1000), "sensors", what)
         await self.worker.queue_frames([LLMMessagesAppendFrame(
             [{"role": "user", "content": f"(cue) {what} {self.felt()}"}], run_llm=True)])
@@ -415,7 +426,7 @@ class Voice(LiveServer):
         except Exception as e:  # a pipeline that dies must leave the switch off and say why
             self.err = str(e) or type(e).__name__
         self.worker = None
-        self.push_state()
+        self.activity.finish("error" if self.err else "idle")
         if brain.day_text(self.day):
             try:
                 await brain.reflect(self.google, MODEL, self.day)

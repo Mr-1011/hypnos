@@ -4,6 +4,8 @@ import { Panel } from './Panel'
 
 const COLOR: Record<BrainNode['kind'], string> = { person: '#f3f4f6', head: '#e0b64d', line: '#c47ad9', day: '#4c9be8', source: '#19d18d', item: '#5fbf9f' }
 const NAME: Record<BrainNode['kind'], string> = { person: 'the person', head: 'a part of the notes', line: 'a note', day: 'a day', source: 'connected', item: 'from a connected source' }
+const TOOL = { sense: 'Checking context', recall: 'Finding memories', body: 'Checking sensors', stay_quiet: 'Staying quiet' }
+const PHASE = { idle: '', processing: 'Preparing response', complete: 'Response ready', quiet: 'Staying quiet', error: 'Interrupted' }
 
 type P = { x: number; y: number; vx: number; vy: number }
 
@@ -15,6 +17,10 @@ export function Memory({ className = '', children }: { className?: string; child
   const ag = useAgent()
   const brain = ag.state?.brain
   const sense = ag.state?.sense
+  const activity = ag.state?.activity
+  const processing = ag.online && activity?.phase === 'processing'
+  const running = processing && activity.steps.some((s) => s.status === 'running')
+  const touched = new Set(ag.online ? sense?.about ?? [] : [])
   const pos = useRef(new Map<string, P>())
   // the picture is laid out in the card's own pixels, so the words keep their size in a card of any height
   const svg = useRef<SVGSVGElement>(null)
@@ -88,35 +94,47 @@ export function Memory({ className = '', children }: { className?: string; child
   }, [brain, near, W, H])
 
   const nodes = (brain?.nodes ?? []).filter((n) => pos.current.has(n.id))
-  const lit = (id: string) => !hot || id === hot || !!near.get(hot)?.has(id)
+  const lit = (id: string) => hot ? id === hot || !!near.get(hot)?.has(id) : !touched.size || touched.has(id) || id === 'person'
   const hotNode = nodes.find((n) => n.id === hot)
 
   return (
     <Panel
       title="Memory"
       className={className}
-      tools={<span className="hr">{sense && sense.worried > 0.6 ? 'sounds worried' : ''}</span>}
+      tools={<span className={`memory-phase ${processing ? 'active' : ''}`} role="status">
+        {!ag.online ? 'Offline' : activity ? running ? 'Looking up context' : PHASE[activity.phase] : ''}
+      </span>}
     >
       <div className="memory">
+        {ag.online && activity && activity.phase !== 'idle' && activity.steps.length > 0 ? (
+          <div className="memory-activity" aria-label="Observed agent activity">
+            {activity.steps.map((step) => <span key={`${activity.turn}-${step.id}`} className={`activity-step ${step.status}`}>
+              <span aria-hidden="true">{step.status === 'done' ? '✓' : step.status === 'failed' ? '!' : step.status === 'cancelled' ? '–' : '·'}</span>
+              {TOOL[step.tool]}<span className="activity-result">{step.status === 'running' ? '…' : ` · ${step.status}`}</span>
+            </span>)}
+          </div>
+        ) : null}
         <svg ref={svg} viewBox={`0 0 ${W} ${H}`} role="img" aria-label="What the agent remembers about the person, as a graph of notes and days">
           {(brain?.links ?? []).map(([a, b]) => {
             const A = pos.current.get(a)
             const B = pos.current.get(b)
-            return A && B ? <line key={`${a}|${b}`} x1={A.x} y1={A.y} x2={B.x} y2={B.y} className={hot && (a === hot || b === hot) ? 'hot' : hot ? 'dim' : ''} /> : null
+            const retrieved = touched.has(a) || touched.has(b)
+            return A && B ? <line key={`${a}|${b}`} x1={A.x} y1={A.y} x2={B.x} y2={B.y} className={hot ? (a === hot || b === hot ? 'hot' : 'dim') : retrieved ? `retrieved ${processing ? 'active' : ''}` : touched.size ? 'dim' : ''} /> : null
           })}
           {nodes.map((n) => {
             const q = pos.current.get(n.id)!
             const r = n.kind === 'person' ? 7 : 3 + 1.4 * Math.sqrt(near.get(n.id)?.size ?? 0)
             // a note's own words are long: the dot shows their start, the line below the picture shows all
-            const whole = (n.kind !== 'line' && n.kind !== 'item') || !!sense?.about.includes(n.id)
+            const whole = (n.kind !== 'line' && n.kind !== 'item') || touched.has(n.id)
             // an item begins with its date: the link to the day shows that, so the dot shows the words
             const words = n.kind === 'item' ? n.label.replace(/^[\d: -]+/, '') : n.label
             const label = n.id === hot && !whole ? '' : whole || words.length <= 22 ? words : `${words.slice(0, 20)}...`
             return (
               <g key={n.id} className={`${n.kind === 'source' ? 'head' : n.kind} ${lit(n.id) ? '' : 'dim'}`} onMouseEnter={() => setHot(n.id)} onMouseLeave={() => setHot(null)}>
                 <circle cx={q.x} cy={q.y} r={r + 6} fill="transparent" />
-                {/* what the person's last words touch, says the decisions model */}
-                {sense?.about.includes(n.id) ? <circle className="touched" cx={q.x} cy={q.y} r={r + 5} stroke={COLOR[n.kind]} /> : null}
+                <title>{n.label}{touched.has(n.id) ? ' — returned by a tool this turn' : ''}</title>
+                {/* These are retrieved matches, not a claim that the model used each one. */}
+                {touched.has(n.id) ? <circle className={`touched ${processing ? 'active' : ''}`} cx={q.x} cy={q.y} r={r + 5} stroke={COLOR[n.kind]} /> : null}
                 <circle cx={q.x} cy={q.y} r={r} fill={COLOR[n.kind]} />
                 <text x={q.x} y={q.y + r + 11} textAnchor="middle">
                   {label}

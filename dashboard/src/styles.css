@@ -1020,7 +1020,22 @@ button.on {
 .memory circle.touched {
   fill: none;
   stroke-width: 1.5;
-  animation: touched 1.6s ease-in-out infinite;
+}
+.memory circle.touched.active { animation: touched 1.6s ease-in-out infinite; }
+.memory line.retrieved { stroke: #c47ad9; stroke-width: 1.8; }
+.memory line.retrieved.active { stroke-dasharray: 5 5; animation: memory-flow 1.6s linear infinite; }
+.memory-phase { font-size: 11px; color: var(--text-3); }
+.memory-phase.active { color: #c47ad9; }
+.memory-activity { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px; flex-shrink: 0; }
+.activity-step { font-size: 10px; color: var(--text-3); border: 1px solid var(--line); border-radius: 12px; padding: 3px 7px; }
+.activity-step > span:first-child { margin-right: 4px; }
+.activity-step.running { color: #e2b8f0; border-color: #c47ad9; }
+.activity-step.done { color: var(--text-2); }
+.activity-step.failed { color: #f0a18c; }
+.activity-result { font-size: 9px; }
+@keyframes memory-flow { to { stroke-dashoffset: -20; } }
+@media (prefers-reduced-motion: reduce) {
+  .memory circle.touched.active, .memory line.retrieved.active { animation: none; }
 }
 .memory g:has(.touched) text {
   fill: var(--text);

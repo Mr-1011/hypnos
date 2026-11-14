@@ -110,6 +110,12 @@ For that the agent works in a loop with tools. It calls the ones it needs, and t
 for one more situation. The Memory card rings what the tools looked at: the earlier days that
 `recall` found, and what `sense` named.
 
+The Memory panel also shows live tool activity: checking context, finding memories and
+checking sensors. Returned nodes and their graph connections light up while a response is
+pending; the animation stops at a response, silence, error or disconnect. These are observed
+tool calls and retrieved matches, not private model reasoning or proof that every match was
+used in the answer. Parallel calls appear together. Starting a new turn clears old activity.
+
 The band hears the Mac's speaker, so the agent does not listen while it speaks: you cannot
 interrupt it.
 
