@@ -183,10 +183,15 @@ keys are read from `.env` at each start. Its docstring is the reference.
 - The Live tab is one screen with no page scroll (`.app.fit` in `styles.css`): the Sleep State graph
   beside the Memory card, whose lower part is the transcript, and three traces under them. Only
   that first row changes its height. A new panel goes on a device tab, or it replaces one on Live.
-- `src/lib/course.ts` samples every 2 s how much the body moves, how fast the brain runs and how
-  much is said, each from 0 to 1, for the Sleep State graph (`components/Course.tsx`: a night of 8 h
-  zoomed out, a pinch zooms, a click follows now). The page holds that history: a reload starts
-  the graph again (see the `shortcut:` comment there).
+- `src/lib/course.ts` samples every 2 s how much the body moves and how much is said, each from 0
+  to 1, the agent's stage of sleep and the Muse's spectrum, for the Sleep State graph
+  (`components/Course.tsx`: a night of 8 h zoomed out, a pinch zooms, a click follows now; the
+  stage colours and the spectrogram's ramp are Patch's). The page holds that history: a reload
+  starts the graph again (see the `shortcut:` comment there).
+- The first `SIM_H` hours of that graph are mock data too: `src/lib/sim.ts` makes up a night that
+  began at 00:00, and `course.shift` moves the graph's clock to it. Set `SIM_H` to 0 for a real
+  night, and never present the made-up hours as measured. `SPEC_DB`, the range of the
+  spectrogram's colours, is a guess: no Muse spectrum was held against it.
 
 ## Conventions
 

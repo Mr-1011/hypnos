@@ -1,9 +1,12 @@
 import { useEffect, useRef } from 'react'
-import { STEP_MS, course, type Sample } from '../lib/course'
+import { SPEC_HZ, STAGES, STEP_MS, course, type Sample, type Stage } from '../lib/course'
 
 const AXIS = 20 // the clock under the plot
-const TOP = 12 // air over the top line
+const TOP = 12 // air over the ribbon
 const PAD = 12 // left and right of the plot
+const RIBBON = 8 // the stage of sleep, along the top
+const NAMES = 20 // the stages' names under the ribbon
+const SPEC_H = 64 // the EEG's spectrogram, under the lines
 const FULL_MS = 8 * 3600_000 // a night: as far out as the graph goes
 const MIN_MS = 60_000 // and as far in: 30 samples
 const FOLLOW_MS = 10 * 60_000 // what a click opens around now
@@ -11,9 +14,20 @@ const TICKS_S = [10, 30, 60, 120, 300, 600, 900, 1800, 3600]
 
 const LINES: { label: string; color: string; get: (s: Sample) => number | null }[] = [
   { label: 'movement', color: '#4c9be8', get: (s) => s.move },
-  { label: 'brain', color: '#c47ad9', get: (s) => s.brain },
   { label: 'talking', color: '#e0b64d', get: (s) => s.talk },
 ]
+
+// Patch's colours for the stages of sleep. Patch has no drowsy: it lies between awake and light.
+const STAGE: Record<Stage, [string, string]> = {
+  awake: ['#e6864f', 'Awake'],
+  drowsy: ['#b9a184', 'Drowsy'],
+  light: ['#4a6fc0', 'Light'],
+  deep: ['#2b2f74', 'Deep'],
+  rem: ['#7fb1e6', 'REM'],
+}
+
+// Patch's ramp for the spectrogram, from quiet to loud
+const HEAT = [[11, 10, 26], [59, 31, 98], [166, 59, 110], [240, 122, 60], [251, 227, 154]]
 
 // What the graph shows: null is the whole night. follow keeps now in the middle, and s is not read then.
 type View = { s: number; w: number; follow: boolean } | null
@@ -31,6 +45,45 @@ function windowOf(v: View): { s: number; w: number } {
   return { s: v.follow ? h - v.w / 2 : clamp(v.s, from, from + FULL_MS - v.w), w: v.w }
 }
 
+// The spectrogram of the window as a picture: a column for each pixel, the mean of the samples in
+// it, and a row for each Hz. It is made again only when the window or the samples change.
+// (drawImage scaling a whole night down to the plot smeared the rows into each other.)
+const pic = { cv: document.createElement('canvas'), key: '' }
+
+function spectrogram(ss: Sample[], a: number, b: number, x: (t: number) => number, W: number, key: string): HTMLCanvasElement {
+  if (key === pic.key) return pic.cv
+  pic.key = key
+  pic.cv.width = W
+  pic.cv.height = SPEC_HZ
+  const sum = new Float32Array(W * SPEC_HZ)
+  const n = new Uint16Array(W)
+  for (let i = a; i <= b; i++) {
+    const spec = ss[i].spec
+    if (!spec) continue
+    // a sample holds until the next one; a timer that ran late leaves no hole
+    const c0 = Math.floor(x(ss[i].t))
+    const c1 = Math.max(c0, Math.floor(x(Math.min(ss[i + 1]?.t ?? Infinity, ss[i].t + 2 * STEP_MS))) - 1)
+    for (let c = Math.max(0, c0); c <= Math.min(W - 1, c1); c++) {
+      n[c]++
+      for (let k = 0; k < SPEC_HZ; k++) sum[c * SPEC_HZ + k] += spec[k]
+    }
+  }
+  const g = pic.cv.getContext('2d')!
+  const img = g.createImageData(W, SPEC_HZ)
+  for (let c = 0; c < W; c++) {
+    if (!n[c]) continue
+    for (let k = 0; k < SPEC_HZ; k++) {
+      const v = (sum[c * SPEC_HZ + k] / n[c] / 255) * (HEAT.length - 1)
+      const lo = Math.min(Math.floor(v), HEAT.length - 2)
+      const o = ((SPEC_HZ - 1 - k) * W + c) * 4 // the top row is the highest Hz
+      for (let j = 0; j < 3; j++) img.data[o + j] = HEAT[lo][j] + (HEAT[lo + 1][j] - HEAT[lo][j]) * (v - lo)
+      img.data[o + 3] = 255
+    }
+  }
+  g.putImageData(img, 0, 0)
+  return pic.cv
+}
+
 function draw(cv: HTMLCanvasElement, s: number, w: number) {
   const W = cv.clientWidth
   const H = cv.clientHeight
@@ -46,12 +99,55 @@ function draw(cv: HTMLCanvasElement, s: number, w: number) {
 
   const ss = course.samples
   const now = head()
-  const bottom = H - AXIS
+  const specTop = H - AXIS - SPEC_H
+  const floor = specTop - 10 // where a line is at 0
+  const ceil = TOP + RIBBON + NAMES // and at 1
   const x = (t: number) => PAD + ((t - s) / w) * (W - 2 * PAD)
-  const y = (v: number) => bottom - 4 - v * (bottom - 4 - TOP)
+  const y = (v: number) => floor - v * (floor - ceil)
+  const nowX = x(now)
 
-  // calm at the bottom, awake at the top: a line at the bottom and one half way, and the clock under
-  // them. The top has none: 12 px under the panel's title line it read as a double line.
+  // the samples in the window and one more on each side, so that everything runs off its edges
+  let a = ss.findIndex((p) => p.t >= s)
+  let b = ss.findIndex((p) => p.t > s + w)
+  if (a < 0) a = ss.length
+  if (b < 0) b = ss.length - 1
+  a = Math.max(0, a - 1)
+  let n = ss.length - 1 // the last sample before the head
+  while (n >= 0 && ss[n].t > now) n--
+
+  // everything measured ends at the head
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(0, 0, nowX, H)
+  ctx.clip()
+
+  // The stage of sleep as on Patch's night chart: a tint behind the lines, a ribbon along the top
+  // and the name. The stage of now has its name at the head.
+  ctx.font = '10px system-ui, -apple-system, sans-serif'
+  ctx.textAlign = 'center'
+  for (let i = a; i <= b; ) {
+    let j = i + 1
+    while (j <= b && ss[j].stage === ss[i].stage) j++
+    const stage = ss[i].stage
+    if (stage) {
+      const x0 = x(ss[i].t)
+      const x1 = Math.min(j < ss.length ? x(ss[j].t) : nowX, nowX)
+      ctx.fillStyle = STAGE[stage][0]
+      ctx.globalAlpha = 0.18
+      ctx.fillRect(x0, TOP, x1 - x0, floor - TOP)
+      ctx.globalAlpha = 1
+      ctx.fillRect(x0, TOP, x1 - x0, RIBBON)
+      const from = Math.max(x0, 0)
+      if (j <= n && Math.min(x1, W) - from > ctx.measureText(STAGE[stage][1]).width + 8) {
+        ctx.fillStyle = 'rgba(255,255,255,0.62)'
+        ctx.fillText(STAGE[stage][1], (from + Math.min(x1, W)) / 2, TOP + RIBBON + 13)
+      }
+    }
+    i = j
+  }
+  ctx.textAlign = 'left'
+
+  // calm at the bottom, awake at the top: a line at the bottom and one half way
   ctx.lineWidth = 1
   ctx.strokeStyle = 'rgba(255,255,255,0.06)'
   for (const g of [0, 0.5]) {
@@ -61,34 +157,16 @@ function draw(cv: HTMLCanvasElement, s: number, w: number) {
     ctx.lineTo(W, yy)
     ctx.stroke()
   }
-  const tick = (TICKS_S.find((n) => w / (n * 1000) <= 8) ?? 3600) * 1000
-  ctx.font = '10px ui-monospace, Menlo, monospace'
-  ctx.fillStyle = 'rgba(255,255,255,0.42)'
-  for (let t = Math.ceil(s / tick) * tick; t <= s + w; t += tick) {
-    const label = new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: tick < 60_000 ? '2-digit' : undefined, hour12: false })
-    ctx.fillText(label, clamp(x(t) - ctx.measureText(label).width / 2, 4, W - 4 - ctx.measureText(label).width), H - 6)
-  }
 
-  // the samples in the window and one more on each side, so the lines run off its edges
-  let a = ss.findIndex((p) => p.t >= s)
-  let b = ss.findIndex((p) => p.t > s + w)
-  if (a < 0) a = ss.length
-  if (b < 0) b = ss.length - 1
   const every = Math.max(1, Math.ceil((b - a) / (W * 2))) // more samples than pixels: every n-th is drawn
-  a = Math.max(0, a - 1)
-  a -= a % every // the same samples on every frame, or the lines shimmer while the window moves
-
-  ctx.save()
-  ctx.beginPath()
-  ctx.rect(0, 0, x(now), H)
-  ctx.clip()
+  const a0 = a - (a % every) // the same samples on every frame, or the lines shimmer while the window moves
   for (const line of LINES) {
     ctx.strokeStyle = line.color
     ctx.lineWidth = 1.5
     ctx.lineJoin = 'round'
     ctx.beginPath()
     let pen = false
-    for (let i = a; i <= b; i += every) {
+    for (let i = a0; i <= b; i += every) {
       const v = line.get(ss[i])
       if (v === null) {
         pen = false
@@ -102,27 +180,52 @@ function draw(cv: HTMLCanvasElement, s: number, w: number) {
     }
     ctx.stroke()
   }
+
+  // the brain as on Patch: the EEG's spectrogram, 1 Hz at the bottom to 32 Hz at the top, bright is loud
+  if (ss.length) ctx.drawImage(spectrogram(ss, a, b, x, W, `${a} ${b} ${s} ${w} ${W}`), 0, specTop, W, SPEC_H)
   ctx.restore()
 
-  // a dot where each line is now: between the two samples around the head
-  let n = ss.length - 1
-  while (n >= 0 && ss[n].t > now) n--
-  if (n >= 0) {
-    const p = ss[n]
-    const q = ss[n + 1] ?? p
-    for (const line of LINES) {
-      const vp = line.get(p)
-      const vq = line.get(q)
-      if (vp === null || vq === null) continue
-      ctx.fillStyle = line.color
-      ctx.beginPath()
-      ctx.arc(x(now), y(vp + (vq - vp) * (q === p ? 0 : (now - p.t) / (q.t - p.t))), 3, 0, 2 * Math.PI)
-      ctx.fill()
-    }
+  // the clock; course.shift moves it for the made-up night
+  const tick = (TICKS_S.find((n) => w / (n * 1000) <= 8) ?? 3600) * 1000
+  ctx.font = '10px ui-monospace, Menlo, monospace'
+  ctx.fillStyle = 'rgba(255,255,255,0.42)'
+  for (let t = Math.ceil((s + course.shift - 1) / tick) * tick; t <= s + course.shift + w; t += tick) { // - 1: the left edge's own label
+    const label = new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: tick < 60_000 ? '2-digit' : undefined, hour12: false })
+    ctx.fillText(label, clamp(x(t - course.shift) - ctx.measureText(label).width / 2, 4, W - 4 - ctx.measureText(label).width), H - 6)
+  }
+
+  if (n < 0) return
+  // now: a line down the graph, a dot where each line is (between the two samples around the head),
+  // and the stage with its colour as a box
+  ctx.strokeStyle = 'rgba(255,255,255,0.22)'
+  ctx.beginPath()
+  ctx.moveTo(Math.round(nowX) + 0.5, TOP)
+  ctx.lineTo(Math.round(nowX) + 0.5, specTop + SPEC_H)
+  ctx.stroke()
+  const p = ss[n]
+  const q = ss[n + 1] ?? p
+  for (const line of LINES) {
+    const vp = line.get(p)
+    const vq = line.get(q)
+    if (vp === null || vq === null) continue
+    ctx.fillStyle = line.color
+    ctx.beginPath()
+    ctx.arc(nowX, y(vp + (vq - vp) * (q === p ? 0 : (now - p.t) / (q.t - p.t))), 3, 0, 2 * Math.PI)
+    ctx.fill()
+  }
+  if (p.stage) {
+    const [color, name] = STAGE[p.stage]
+    ctx.font = '600 11px system-ui, -apple-system, sans-serif'
+    const wide = 12 + ctx.measureText(name).width
+    const lx = nowX + 8 + wide > W - 4 ? nowX - 8 - wide : nowX + 8 // left of the line when the right has no room
+    ctx.fillStyle = color
+    ctx.fillRect(lx, TOP + RIBBON + 5, 8, 8)
+    ctx.fillStyle = 'rgba(255,255,255,0.85)'
+    ctx.fillText(name, lx + 12, TOP + RIBBON + 13)
   }
 }
 
-// the names of the lines, for the panel's header: the colour is a box, the text is the page's
+// the names for the panel's header: the colour is a box, the text is the page's
 export function Legend() {
   return (
     <div className="band-legend">
@@ -132,6 +235,14 @@ export function Legend() {
           {l.label}
         </span>
       ))}
+      <span>
+        <i style={{ width: 20, background: `linear-gradient(90deg, ${HEAT.slice(1).map((c) => `rgb(${c})`).join(', ')})` }} />
+        brain
+      </span>
+      <span>
+        <i style={{ width: 20, background: `linear-gradient(90deg, ${STAGES.map((st) => STAGE[st][0]).join(', ')})` }} />
+        stage
+      </span>
     </div>
   )
 }
@@ -151,7 +262,7 @@ export function Course() {
     let raf = 0
     const frame = () => {
       const to = windowOf(view.current)
-      const c = (cam.current ??= to)
+      const c = course.samples.length ? (cam.current ??= to) : to // no samples yet: nothing to ease from
       // a new width is reached over some frames, and the left edge by the same share of its way, so
       // the lines stay in sight between the night and the last minutes
       const there = Math.abs(Math.log(to.w / c.w)) < 0.01
