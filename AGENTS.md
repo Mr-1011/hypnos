@@ -74,10 +74,9 @@ remembered switch. It does not run the watchdog.
 
 The band's microphone (`set_mic`, `POST /api/mic`) sends its sound to Deepgram through the kit's
 `speech.py`, which reads `DEEPGRAM_API_KEY` from the environment or from `.env` in the folder the
-program is started in. The sound leaves the Mac, so two lines must stay: the one `speech.py` prints
-before any sound is sent, and the one the page shows
-(`dashboard/src/components/Transcript.tsx`): it is there before the band is linked too, because
-linking the band starts the agent. Deepgram answers on its own thread and the packets go
+program is started in. The sound leaves the Mac, so the line `speech.py` prints before any sound
+is sent must stay. The page has no such line, and no other note or error text (the user's rule,
+2026-11-14): do not add one. Deepgram answers on its own thread and the packets go
 out on another (`feed`): nothing of it may block the event loop that records the motion.
 
 `GET /api/audio` on the band program is a second stream: the microphone's Opus packets, for the
@@ -118,14 +117,14 @@ band is switched off on its card (`watch()`), and `POST /api/talk` does the same
 keys are read from `.env` at each start. Its docstring is the reference.
 
 - The sound goes to Deepgram and the text to Google: keep `NOTE`, printed before any sound is
-  sent, the page's line (`Transcript.tsx`), and `mip_opt_out` on both Deepgram services.
+  sent, and `mip_opt_out` on both Deepgram services. The page says nothing of it (see above).
 - The loop is deaf while the agent speaks (`deaf_until`), because the band hears the Mac's
   speaker: see the `shortcut:` comment in `BandInput`.
 - The agent must know the day, not ask about it (the user's rule, 2026-11-14). `sensors()` runs
   for as long as the program does, also with the loop off: `watch()` reads each sensor program's
   stream, and every settled line of the band program's own transcript (`POST /api/mic`) goes into
   the day's file as a
-  `heard` line. So the page's microphone notice says that the text is kept and goes to Google.
+  `heard` line.
 - `brain.py` is its memory, Markdown in `data/brain/`: `days/<date>.md` is the day (`heard`
   lines, and the talk), and `person.md` is the notes about the person. `talk()` puts the notes
   and the day after `prompt.md`; when the loop ends, `brain.reflect()` has Gemini write the notes
