@@ -19,6 +19,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 DIR = HERE.parent / "data" / "brain"
+PAST = HERE / "mock" / "days"  # a made-up past: see days()
 
 # shortcut: these three are set for the awake demo, from one afternoon and no real night; set them
 # again from recorded nights, where restless is a few turns in minutes and not 10 s of moving.
@@ -55,6 +56,14 @@ def day_text(day):
     return f.read_text() if f.exists() else ""
 
 
+def days():
+    """Every day there is a file for, as {date: its file}: the real ones in data/brain/days/ and
+    the made-up ones in agent/mock/days/. A real day takes the place of a made-up one.
+    shortcut: the band was worn for one day, so the weeks before it are made up for the demo;
+    delete agent/mock/days/ when there are real weeks."""
+    return {f.stem: f for folder in (PAST, DIR / "days") for f in sorted(folder.glob("*.md"))}
+
+
 def sources():
     """What the agent is connected to besides the band, as {name: a Markdown list}.
     shortcut: made-up files in agent/mock/ (calendar.md, mail.md; one more file is one more source),
@@ -68,7 +77,7 @@ def recall(words, before):
     shortcut: it finds words, not meaning, and reads every day's file; give the days an index that
     finds meaning when the band has been worn for more than a few months."""
     words = [w.lower() for w in words]
-    return [(f.stem, line[2:]) for f in sorted((DIR / "days").glob("*.md"), reverse=True) if f.stem < before
+    return [(day, line[2:]) for day, f in sorted(days().items(), reverse=True) if day < before
             for line in f.read_text().splitlines() if line.startswith("- ") and any(w in line.lower() for w in words)][:30]
 
 
@@ -78,9 +87,9 @@ def graph():
     date is linked to that day."""
     nodes = {"person": {"id": "person", "label": "the person", "kind": "person"}}
     links = []
-    for f in sorted((DIR / "days").glob("*.md")):
-        nodes[f.stem] = {"id": f.stem, "label": f.stem, "kind": "day"}
-        links.append(["person", f.stem])
+    for day in sorted(days()):
+        nodes[day] = {"id": day, "label": day, "kind": "day"}
+        links.append(["person", day])
     for hub, leaf, doc in [("head", "line", notes())] + [("source", "item", f"## {name}\n{text}") for name, text in sources().items()]:
         head = None
         for line in doc.splitlines():

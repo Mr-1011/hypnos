@@ -12,6 +12,7 @@ from unittest import mock
 import brain
 
 
+@mock.patch.object(brain, "PAST", Path("no-made-up-past"))
 class Brain(unittest.TestCase):
     def test_restless_is_ten_moving_seconds_in_thirty(self):
         self.assertFalse(brain.restless([5.0] * 60))
