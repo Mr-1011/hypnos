@@ -16,6 +16,9 @@ export interface AgentState {
   err: string | null // what went wrong in the loop, in the service's own words
   lines: [number, Who, string][] // [utc ms, who, what was said]
   brain: { nodes: BrainNode[]; links: [string, string][] }
+  // agent/brain.py sense(): what the decisions model made of the last moment. about: ids of the
+  // notes the person's words touch; worried: 0 to 1; state: awake, drowsy, asleep or restless
+  sense: { about: string[]; worried: number; state: string } | null
 }
 
 type Msg = ({ t: 'state' } & AgentState) | { t: 'text'; ts: number; who: Who; text: string; final: 0 | 1 }

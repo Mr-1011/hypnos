@@ -1041,3 +1041,16 @@ button.on {
   margin-right: 6px;
   font-weight: 600;
 }
+.memory circle.touched {
+  fill: none;
+  stroke-width: 1.5;
+  animation: touched 1.6s ease-in-out infinite;
+}
+.memory g:has(.touched) text {
+  fill: var(--text);
+}
+@keyframes touched {
+  50% {
+    opacity: 0.25;
+  }
+}

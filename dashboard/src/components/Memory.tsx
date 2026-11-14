@@ -15,6 +15,7 @@ type P = { x: number; y: number; vx: number; vy: number }
 export function Memory({ className = '' }: { className?: string }) {
   const ag = useAgent()
   const brain = ag.state?.brain
+  const sense = ag.state?.sense
   const pos = useRef(new Map<string, P>())
   const [, setFrame] = useState(0)
   const [hot, setHot] = useState<string | null>(null)
@@ -84,7 +85,16 @@ export function Memory({ className = '' }: { className?: string }) {
   const hotNode = nodes.find((n) => n.id === hot)
 
   return (
-    <Panel title="Memory" className={className} tools={<span className="hr">{nodes.length > 1 ? `${nodes.length - 1} notes and days` : ''}</span>}>
+    <Panel
+      title="Memory"
+      className={className}
+      tools={
+        <span className="hr">
+          {/* the decisions model's guess from words and movement, not a sleep stage */}
+          {sense ? `seems ${sense.state}${sense.worried > 0.6 ? ', worried' : ''}` : nodes.length > 1 ? `${nodes.length - 1} notes and days` : ''}
+        </span>
+      }
+    >
       <div className="memory">
         <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="What the agent remembers about the person, as a graph of notes and days">
           {(brain?.links ?? []).map(([a, b]) => {
@@ -96,10 +106,13 @@ export function Memory({ className = '' }: { className?: string }) {
             const q = pos.current.get(n.id)!
             const r = n.kind === 'person' ? 7 : 3 + 1.4 * Math.sqrt(near.get(n.id)?.size ?? 0)
             // a note's own words are long: the dot shows their start, the line below the picture shows all
-            const label = n.kind === 'line' && n.id !== hot ? (n.label.length > 22 ? `${n.label.slice(0, 20)}...` : n.label) : n.kind === 'line' ? '' : n.label
+            const whole = n.kind !== 'line' || !!sense?.about.includes(n.id)
+            const label = n.id === hot && !whole ? '' : whole || n.label.length <= 22 ? n.label : `${n.label.slice(0, 20)}...`
             return (
               <g key={n.id} className={`${n.kind} ${lit(n.id) ? '' : 'dim'}`} onMouseEnter={() => setHot(n.id)} onMouseLeave={() => setHot(null)}>
                 <circle cx={q.x} cy={q.y} r={r + 6} fill="transparent" />
+                {/* what the person's last words touch, says the decisions model */}
+                {sense?.about.includes(n.id) ? <circle className="touched" cx={q.x} cy={q.y} r={r + 5} stroke={COLOR[n.kind]} /> : null}
                 <circle cx={q.x} cy={q.y} r={r} fill={COLOR[n.kind]} />
                 <text x={q.x} y={q.y + r + 11} textAnchor="middle">
                   {label}
