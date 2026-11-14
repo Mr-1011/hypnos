@@ -120,9 +120,12 @@ cycles of the night. With no Muse on the head it has only stillness and the cloc
 wrist tracker scores sleep. The rules were set by hand and no night was held against them: a
 prototype's estimate, not a sleep lab's.
 
-The **Sleep** graph in the Live tab draws the course: the stage on top, and under it the heart
-rate, the movement of wrist and head, and the brain's delta, theta and alpha, all on one clock.
-It begins when the page opens, and a reload of the page starts it again.
+The **Arousal** graph in the Live tab draws how awake you are, as three lines on one clock, calm
+at the bottom: how much the body moves (wrist and head), how fast the brain runs (the share of
+alpha and beta in the EEG) and how much is said. Zoomed all the way out it is a night of 8 hours.
+A pinch, or Cmd and a scroll, zooms; a sideways swipe pans; a click follows, with now in the
+middle, and a second click goes back to the night. It begins when the page opens, and a reload of
+the page starts it again.
 
 While the agent is on, the sensors make it speak without being asked, one sentence each time,
 about what the notes say comes up or weighs on you: when you go to bed, when you fall asleep
