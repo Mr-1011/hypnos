@@ -6,7 +6,7 @@ One Pipecat pipeline, in its own process so that nothing here can hold up a reco
     the band's sound (live_band.py, /api/audio, Opus)
       -> Deepgram Flux      speech to text; it also decides when the person has finished
       -> Gemini             the agent (prompt.md): it calls its tools until it knows what to say
-      -> Deepgram Flux TTS  text to speech (Alexis, speed 0.7, expressivity -2)
+      -> Deepgram Aura      text to speech
       -> this Mac's sound output (the band has no speaker): the speakers, or AirPods on the Mac
 
 The agent does not ask the person about their day: it knows it. For as long as this program runs it
@@ -88,7 +88,7 @@ from pipecat.processors.aggregators.llm_context import LLMContext  # noqa: E402
 from pipecat.processors.aggregators.llm_response_universal import LLMContextAggregatorPair  # noqa: E402
 from pipecat.processors.frame_processor import FrameProcessor  # noqa: E402
 from pipecat.services.deepgram.flux.stt import DeepgramFluxSTTService  # noqa: E402
-from pipecat.services.deepgram.flux.tts import DeepgramFluxTTSService  # noqa: E402
+from pipecat.services.deepgram.tts import DeepgramTTSService  # noqa: E402
 from pipecat.services.google.llm import GoogleLLMService  # noqa: E402
 from pipecat.transports.base_input import BaseInputTransport  # noqa: E402
 from pipecat.transports.base_transport import TransportParams  # noqa: E402
@@ -101,9 +101,7 @@ from live_server import LiveServer  # noqa: E402
 
 RATE = 16000                  # the band's microphone: 16 kHz, mono, 20 ms a packet
 MODEL = "gemini-4-hydrogen"   # the fast one of the three the key reaches (listed 2026-11-14)
-VOICE = "flux-alexis-en"
-VOICE_SPEED = 0.7
-VOICE_EXPRESSIVITY = -2       # calm end of Flux's expressive range, requested 2026-11-14
+VOICE = "aura-2-pandora-en"   # Deepgram calls it smooth, calm, melodic, breathy
 ECHO_S = 0.6                  # the room still holds the agent's voice this long after it stops
 CALM_GAP_S = 120              # no calm words sooner than this after the agent last spoke; a guess, no night behind it
 KEYS = ("DEEPGRAM_API_KEY", "GOOGLE_API_KEY")
@@ -250,9 +248,8 @@ class Voice(LiveServer):
         # word, "low" 2 to 3 s; "minimal" is refused for this model, and a budget of 0 is no faster than low.
         llm = GoogleLLMService(api_key=keys["GOOGLE_API_KEY"], settings=GoogleLLMService.Settings(
             model=MODEL, system_instruction=system, thinking=GoogleLLMService.ThinkingConfig(thinking_level="low")))
-        tts = DeepgramFluxTTSService(api_key=keys["DEEPGRAM_API_KEY"], mip_opt_out=True,
-                                    settings=DeepgramFluxTTSService.Settings(
-                                        voice=VOICE, speed=VOICE_SPEED, expressivity=VOICE_EXPRESSIVITY))
+        tts = DeepgramTTSService(api_key=keys["DEEPGRAM_API_KEY"], mip_opt_out=True,
+                                 settings=DeepgramTTSService.Settings(voice=VOICE))
         # Pipecat tells the model of each tool by its name, its docstring and its arguments, and runs
         # the loop: the model calls tools, gets what they return, and then speaks.
         tools = [getattr(self, name) for name in TOOLS]

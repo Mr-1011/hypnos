@@ -110,8 +110,7 @@ written.
 
 `voice.py` is one Pipecat pipeline in its own process, so that nothing in it can hold up a
 recording: the band's sound (`BandInput`, from `/api/audio`) to Deepgram Flux (speech to text and
-the end of a turn), Gemini (`prompt.md` is the system instruction), Deepgram Flux TTS (Alexis,
-speed 0.7, expressivity -2) and
+the end of a turn), Gemini (`prompt.md` is the system instruction), Deepgram Aura (the voice) and
 the Mac's sound output. It is a `LiveServer` and holds no Bluetooth link. The page has no switch
 for the loop (the user's rule, 2026-11-14): it starts when the band is linked and ends when the
 band is switched off on its card (`watch()`), and `POST /api/talk` does the same by hand. The
@@ -148,10 +147,7 @@ keys are read from `.env` at each start. Its docstring is the reference.
   them after `prompt.md`.
 - What the agent is for (the user's rule, 2026-11-14): it answers what weighs on the person with
   an earlier time when the same kind of thing went well, in one or two sentences. Two cases: the
-  person speaks in their sleep, and preparation while awake/drowsy for an important upcoming event.
-  Preparation requires the person's stated high stakes and a concrete helpful behavior from their
-  own retrieved words; otherwise use `stay_quiet`. Movement alone does not identify a worry.
-  These are prompt-level relevance rules, not a validated estimate of impact. It must name
+  person speaks in their sleep, and the body shows stress while they say nothing. It must name
   only an earlier time that `recall` gave it: keep that line in `prompt.md`.
 - `sleep.py` scores the stage of sleep each half minute (`epochs()`), from the Muse's band shares
   and from movement, and counts cycles. Its rules were set by hand: read its `shortcut:` comment
