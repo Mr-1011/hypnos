@@ -990,3 +990,9 @@ button.on {
 .said .guess span {
   color: var(--text-3);
 }
+.said b.you {
+  color: var(--text-3);
+}
+.said b.agent {
+  color: var(--eeg);
+}

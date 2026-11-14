@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { NightBar } from './components/NightBar'
 import { DeviceCard } from './components/DeviceCard'
 import { type Tone } from './components/Panel'
+import { agent } from './lib/agent'
 import { band, bandApi, useBand } from './lib/band'
 import { muse, museApi, useMuse } from './lib/muse'
 import { polar, polarApi, usePolar } from './lib/polar'
@@ -89,6 +90,7 @@ export default function App() {
     band.start()
     muse.start()
     polar.start()
+    agent.start()
   }, [])
   useEffect(() => {
     try {
