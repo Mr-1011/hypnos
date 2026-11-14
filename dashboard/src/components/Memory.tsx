@@ -125,19 +125,18 @@ export function Memory({ className = '', children }: { className?: string; child
             )
           })}
         </svg>
-        <p className="memory-said">
-          {hotNode ? (
-            <>
-              <b style={{ color: COLOR[hotNode.kind] }}>{NAME[hotNode.kind]}</b> {hotNode.label}
-            </>
-          ) : !ag.online ? (
-            'The agent program does not answer.'
-          ) : nodes.length > 1 ? (
-            'Each dot is a note or a day. Point at one to read it.'
-          ) : (
-            'Nothing is remembered yet. The notes grow with each talk.'
-          )}
-        </p>
+        {/* only when there is something to say: the dot under the pointer, or a program that is down */}
+        {hotNode || !ag.online ? (
+          <p className="memory-said">
+            {hotNode ? (
+              <>
+                <b style={{ color: COLOR[hotNode.kind] }}>{NAME[hotNode.kind]}</b> {hotNode.label}
+              </>
+            ) : (
+              'The agent program does not answer.'
+            )}
+          </p>
+        ) : null}
       </div>
       {children}
     </Panel>

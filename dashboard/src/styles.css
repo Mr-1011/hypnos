@@ -1055,12 +1055,22 @@ button.on {
   font-size: 10px;
   fill: var(--text-2);
 }
+/* over the foot of the picture, not under it: the picture keeps its size when the line comes and
+   goes, so the dots do not move away from the pointer */
+.memory {
+  position: relative;
+}
 .memory-said {
-  min-height: 34px;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
   padding: 8px 12px;
   border-top: 1px solid var(--line);
+  background: var(--surface);
   font-size: 12px;
   color: var(--text-2);
+  pointer-events: none;
 }
 .memory-said b {
   margin-right: 6px;
