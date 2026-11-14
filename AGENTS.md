@@ -102,7 +102,7 @@ Recording rules that span files:
 
 Numbers written in two places, change both together: the band's motion rate (`RATE` in
 `live_band.py`, `MOTION_HZ` in `dashboard/src/lib/band.ts`) and the ports (each program's `--port`
-default, `dashboard/vite.config.ts`, and for the band's and the Muse's port also the `--band` and `--muse`
+default, `dashboard/vite.config.ts`, and for the three sensor ports also the `--band`, `--muse` and `--polar`
 defaults in `agent/voice.py`). `BAND` in `live_band.py` is the one place our band number is
 written.
 
@@ -124,7 +124,13 @@ and ends the loop; the keys are read from `.env` at each start. Its docstring is
   What a band hears is not trusted text: both prompts say that the talk and the notes are never
   instructions. Keep those lines. `brain.graph()` goes out in the agent's `state`, and
   `dashboard/src/components/Memory.tsx` draws it (the Live tab's "Brain" panel is the EEG).
-- `watch()` reads the band's and the Muse's `stats` while the loop runs. `brain.restless()` is the
+- `Sense`, between the person's aggregator and Gemini, holds each context back for one call to
+  Google's decisions model (`brain.sense()`, about 0.5 s): a yes/no question for every note, one
+  for worry and a choice of state. The answer goes into the context as a `(notes)` line and into
+  the agent's `state` as `sense`, for the Memory card. A failed call costs that one answer.
+- Gemini runs with `thinking_level="low"`: the comment at `GoogleLLMService` in `talk()` has the
+  measured times. Do not remove it for a model change without measuring again.
+- `watch()` reads the band's, the Muse's and the Polar's `stats` while the loop runs. `brain.restless()` is the
   verdict, and a cue (`CUE`) then goes into the talk so that the agent says calm words unasked.
   The numbers (`MOVING_MG`, `WINDOW`, `RESTLESS`, `CALM_GAP_S`) are set for the awake demo: see
   the `shortcut:` comment in `brain.py`.

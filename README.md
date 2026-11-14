@@ -74,7 +74,7 @@ show in the Transcript panel. The voice plays on the Mac's sound output (the ban
 speaker): the speakers, or AirPods linked to the Mac.
 
 Deepgram hears (Flux, which also decides when you have finished) and speaks (Aura); Gemini writes
-the answers from `agent/prompt.md`. So the band's sound goes to Deepgram, and what is said goes as
+the answers from `agent/prompt.md`, about 2 s after you stop. So the band's sound goes to Deepgram, and what is said goes as
 text to Google: tell the people near the band first. One switch at a time: with the agent on, the
 Microphone switch is locked.
 
@@ -96,6 +96,12 @@ and the notes go to Google as text with each talk):
 The **Memory** card in the Live tab draws both as a graph: a dot for each note and each day, and a
 line from a note to the days it names. Point at a dot to read it. A hand edit shows after a
 reload of the page.
+
+Before the agent answers, Google's decisions model (`gemini-decision-1`) gets one call with the
+last lines of the talk and the sensors' numbers. It says which notes your words touch, whether
+you sound worried, and the state you seem to be in: awake, drowsy, asleep or restless. The agent
+answers with that in mind, and the Memory card rings the touched notes and shows the state. The
+state is a guess from words and movement, not a sleep stage.
 
 While the agent is on it also watches how much the wrist (band) and the head (Muse) move. When
 you do not rest, 10 moving seconds in 30, it says one calm sentence without being asked, about
