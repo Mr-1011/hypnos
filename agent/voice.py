@@ -25,6 +25,9 @@ A cue goes to Gemini like a line of the talk, and the notes say what to speak to
 
     ./run.sh                 starts it with the three sensor programs
 
+There is no switch for the loop. It starts when the band is linked and ends when the band is
+switched off on its card (watch()); POST /api/talk does the same by hand.
+
 API on 127.0.0.1:5304 (the page reaches it as /api/agent):
     GET  /api/stream   server-sent events: state, text ({who: "you" | "agent", text, final}).
                        The state carries the brain as nodes and links (brain.graph), what the
@@ -305,11 +308,26 @@ class Voice(LiveServer):
         what the band's microphone heard. A body that does not rest gets calm words, unasked."""
         moves = collections.deque(maxlen=brain.WINDOW)
         while True:
+            asked = None  # what the band's link last asked of the loop on this stream: on or off
             try:
                 # read_bufsize: one event is one line, and the Muse's are long
                 async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=None), read_bufsize=2 ** 20) as http, \
                         http.get(url) as r:
                     async for line in r.content:
+                        if where == "wrist" and line.startswith(b'data: {"t":"state"'):
+                            m = json.loads(line[6:])
+                            # The page has no switch for the agent (the user's rule, 2026-11-14): the band's
+                            # is the one. The loop starts when the band is linked and ends when the band is
+                            # switched off on its card, which also forgets it. A link lost for a moment and
+                            # a band program that starts again end nothing: a new start is a new night and
+                            # a new first sentence.
+                            on = True if m["link"] == "streaming" else False if m["link"] == "idle" and not m["remembered"] else None
+                            if on is not None and on != asked:
+                                asked = on
+                                err = await self.talk(on)
+                                if err:  # no keys: the page says why the agent is silent
+                                    self.err = err
+                                    self.push_state()
                         if line.startswith(b'data: {"t":"text"'):
                             m = json.loads(line[6:])
                             if m["final"]:  # the band program's own transcript: its Microphone switch is on

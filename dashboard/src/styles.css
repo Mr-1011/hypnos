@@ -922,7 +922,7 @@ button.on {
 .mic-note.bad {
   color: var(--bad);
 }
-/* the lower part of the Memory card: the note beside the two switches, then the lines */
+/* the lower part of the Memory card: the note, then the lines */
 .talk {
   display: flex;
   flex: 1 1 0;
@@ -938,10 +938,6 @@ button.on {
 .talk-head .mic-note {
   flex: 1;
   padding: 0;
-}
-.talk-head .tools {
-  flex: none;
-  flex-wrap: nowrap;
 }
 /* no height of its own: it takes what the card has left, so the charts below do not move with
    every sentence */

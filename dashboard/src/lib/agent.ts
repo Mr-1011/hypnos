@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { Source, post } from './sse'
+import { Source } from './sse'
 
 // agent/voice.py, the voice loop. Its lines are both sides of the talk.
 export type Who = 'you' | 'agent'
@@ -59,5 +59,3 @@ export function useAgent(): AgentLive {
   useSyncExternalStore(agent.src.subscribe, agent.src.version)
   return agent
 }
-
-export const agentApi = (path: string, body?: unknown) => post('/api/agent', `/${path}`, body)

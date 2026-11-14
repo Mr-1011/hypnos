@@ -59,28 +59,32 @@ search again.
 
 ## Transcript
 
-The **Microphone** switch in the Live tab turns the band's microphone on and shows what it hears as
-text, while people speak. The sound goes over the internet to Deepgram, a company: tell the people
-near the band first, and switch it off when someone asks. The band's light is solid blue while the
-microphone is on. The text is English (`speech.create()` in `sensors/live_band.py` takes
-`language="de"`). With `./run.sh --sim` the pretend band plays a recording of a person reading a
-fable, so the transcript can be tried with the key and no band. While the agent program runs, every
-settled line is also kept in the day's file (see The brain): the people near the band must know
-that too.
+The lower part of the **Memory** card in the Live tab shows what the band's microphone hears as
+text, while people speak, and what the agent answers. There is no switch for it: the agent listens
+when the band is linked (see Agent). The sound goes over the internet to Deepgram, a company: tell
+the people near the band first, and switch the band off on its card when someone asks. The band's
+light is solid blue while the microphone is on. With `./run.sh --sim` the pretend band plays a
+recording of a person reading a fable, so the transcript can be tried with the keys and no band.
+
+The band program can also write the text with no agent: `POST /api/mic` with `{"on": true}` on
+port 5303, not while the agent is on, or every sentence shows twice. That text is English
+(`speech.create()` in `sensors/live_band.py` takes `language="de"`). While the agent program
+runs, every settled line of it is also kept in the day's file (see The brain): the people near
+the band must know that too.
 
 ## Agent
 
-The **Agent** switch, beside the Microphone switch, starts the voice loop at bedtime. The agent
-does not ask how the day was: it knows the day from what the band heard (keep the Microphone
-switch on through the day), and speaks from that. The band's microphone hears what you say back,
+The voice loop has no switch: it starts when the band is linked, and it ends when you switch the
+band off on its card. The agent
+does not ask how the day was: it knows the day from what the band heard, and speaks from that.
+The band's microphone hears what you say back,
 and the agent answers. Both sides
 show in the Transcript panel. The voice plays on the Mac's sound output (the band has no
 speaker): the speakers, or AirPods linked to the Mac.
 
 Deepgram hears (Flux, which also decides when you have finished) and speaks (Aura); Gemini writes
 the answers from `agent/prompt.md`, about 2 s after you stop. So the band's sound goes to Deepgram, and what is said goes as
-text to Google: tell the people near the band first. One switch at a time: with the agent on, the
-Microphone switch is locked.
+text to Google: tell the people near the band first.
 
 The band hears the Mac's speaker, so the agent does not listen while it speaks: you cannot
 interrupt it.
@@ -90,8 +94,8 @@ interrupt it.
 The agent keeps what it learns as Markdown in `data/brain/` (git ignores it; it stays on this Mac,
 and the notes go to Google as text with each talk):
 
-- `days/<date>.md`: the day, a line for each sentence: what the band's microphone heard while
-  the Microphone switch was on (you and whoever was near), and both sides of the talk at night.
+- `days/<date>.md`: the day, a line for each sentence: what the band program's own transcript
+  heard (you and whoever was near), and both sides of the talk at night.
 - `person.md`: the notes about you: what is on your mind, what comes up, what helps. The agent
   reads them and the day at the start of a talk, so it knows what weighs on you. When a talk
   ends, Gemini writes them again from the old notes and the day (`agent/reflect.md` says

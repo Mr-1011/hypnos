@@ -17,7 +17,7 @@ agent answers aloud).
 cd sensors && ../.venv/bin/python -m unittest test_live_band                                    # all tests
 cd sensors && ../.venv/bin/python -m unittest test_live_band.Gap.test_lost_samples_become_nan   # one test
 
-cd agent && ../.venv/bin/python -m unittest test_brain test_sleep                               # the agent's tests
+cd agent && ../.venv/bin/python -m unittest test_brain test_sleep test_voice                    # the agent's tests
 
 cd dashboard && npx tsc --noEmit    # type check; strict, with noUnusedLocals and noUnusedParameters
 ```
@@ -75,12 +75,13 @@ remembered switch. It does not run the watchdog.
 The band's microphone (`set_mic`, `POST /api/mic`) sends its sound to Deepgram through the kit's
 `speech.py`, which reads `DEEPGRAM_API_KEY` from the environment or from `.env` in the folder the
 program is started in. The sound leaves the Mac, so two lines must stay: the one `speech.py` prints
-before any sound is sent, and the one the page shows while a switch is on
-(`dashboard/src/components/Transcript.tsx`). Deepgram answers on its own thread and the packets go
+before any sound is sent, and the one the page shows
+(`dashboard/src/components/Transcript.tsx`): it is there before the band is linked too, because
+linking the band starts the agent. Deepgram answers on its own thread and the packets go
 out on another (`feed`): nothing of it may block the event loop that records the motion.
 
 `GET /api/audio` on the band program is a second stream: the microphone's Opus packets, for the
-agent. The band's microphone is on while the switch is on or someone listens there
+agent. The band's microphone is on while `/api/mic` has it on or someone listens there
 (`mic_wanted()`), so a listener that goes away, or crashes, switches it off.
 
 Each program's docstring is the reference for its HTTP API, its recording format and the measured
@@ -111,16 +112,19 @@ written.
 `voice.py` is one Pipecat pipeline in its own process, so that nothing in it can hold up a
 recording: the band's sound (`BandInput`, from `/api/audio`) to Deepgram Flux (speech to text and
 the end of a turn), Gemini (`prompt.md` is the system instruction), Deepgram Aura (the voice) and
-the Mac's sound output. It is a `LiveServer` and holds no Bluetooth link. `POST /api/talk` starts
-and ends the loop; the keys are read from `.env` at each start. Its docstring is the reference.
+the Mac's sound output. It is a `LiveServer` and holds no Bluetooth link. The page has no switch
+for the loop (the user's rule, 2026-11-14): it starts when the band is linked and ends when the
+band is switched off on its card (`watch()`), and `POST /api/talk` does the same by hand. The
+keys are read from `.env` at each start. Its docstring is the reference.
 
 - The sound goes to Deepgram and the text to Google: keep `NOTE`, printed before any sound is
-  sent, the page's line while the Agent switch is on, and `mip_opt_out` on both Deepgram services.
+  sent, the page's line (`Transcript.tsx`), and `mip_opt_out` on both Deepgram services.
 - The loop is deaf while the agent speaks (`deaf_until`), because the band hears the Mac's
   speaker: see the `shortcut:` comment in `BandInput`.
 - The agent must know the day, not ask about it (the user's rule, 2026-11-14). `sensors()` runs
   for as long as the program does, also with the loop off: `watch()` reads each sensor program's
-  stream, and every settled line of the band's Microphone switch goes into the day's file as a
+  stream, and every settled line of the band program's own transcript (`POST /api/mic`) goes into
+  the day's file as a
   `heard` line. So the page's microphone notice says that the text is kept and goes to Google.
 - `brain.py` is its memory, Markdown in `data/brain/`: `days/<date>.md` is the day (`heard`
   lines, and the talk), and `person.md` is the notes about the person. `talk()` puts the notes
@@ -146,7 +150,8 @@ and ends the loop; the keys are read from `.env` at each start. Its docstring is
   awake to drowsy (`epochs()`), and a body that does not rest (`brain.restless()` in `watch()`).
   The numbers (`MOVING_MG`, `WINDOW`, `RESTLESS`, `CALM_GAP_S`) are set for the awake demo: see
   the `shortcut:` comment in `brain.py`.
-- `voice.py` has no test. Try it with `sensors/live_band.py --sim` on a spare port and `--band`
+- `test_voice.py` covers only the rule that starts and ends the loop. Try the rest of `voice.py`
+  with `sensors/live_band.py --sim` on a spare port and `--band`
   set to it. The pretend band always reads as restless (28 mg).
 
 ### Page (`dashboard/`)
