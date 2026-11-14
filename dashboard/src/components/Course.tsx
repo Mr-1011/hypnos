@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { STEP_MS, course, type Sample } from '../lib/course'
 
 const AXIS = 20 // the clock under the plot
-const TOP = 30 // the names over it
+const TOP = 12 // air over the top line
 const PAD = 12 // left and right of the plot
 const FULL_MS = 8 * 3600_000 // a night: as far out as the graph goes
 const MIN_MS = 60_000 // and as far in: 30 samples
@@ -119,17 +119,20 @@ function draw(cv: HTMLCanvasElement, s: number, w: number) {
       ctx.fill()
     }
   }
+}
 
-  // the names in the lines' colours; one with no data now is dimmed
-  let lx = PAD
-  ctx.font = '600 11px system-ui, -apple-system, sans-serif'
-  for (const line of LINES) {
-    ctx.fillStyle = line.color
-    ctx.globalAlpha = ss.length && line.get(ss[ss.length - 1]) !== null ? 1 : 0.4
-    ctx.fillText(line.label, lx, 18)
-    lx += ctx.measureText(line.label).width + 16
-  }
-  ctx.globalAlpha = 1
+// the names of the lines, for the panel's header: the colour is a box, the text is the page's
+export function Legend() {
+  return (
+    <div className="band-legend">
+      {LINES.map((l) => (
+        <span key={l.label}>
+          <i style={{ background: l.color }} />
+          {l.label}
+        </span>
+      ))}
+    </div>
+  )
 }
 
 // How awake the person is, as one graph: how much the body moves, how fast the brain runs and how

@@ -3,7 +3,7 @@ import { MOTION_HZ, band } from '../lib/band'
 import { EEG_HZ, EEG_NAMES, muse } from '../lib/muse'
 import { ECG_HZ, polar } from '../lib/polar'
 import { Traces, type Lane } from '../components/Traces'
-import { Course } from '../components/Course'
+import { Course, Legend } from '../components/Course'
 import { Transcript } from '../components/Transcript'
 import { Memory } from '../components/Memory'
 import { Panel, Seg } from '../components/Panel'
@@ -31,7 +31,7 @@ export function LiveTab() {
 
   return (
     <main className="grid">
-      <Panel title="Arousal" className="span6">
+      <Panel title="Arousal" className="span6" tools={<Legend />}>
         <Course />
       </Panel>
       <Memory className="span6">

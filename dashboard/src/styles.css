@@ -485,6 +485,9 @@ canvas {
   width: 8px;
   height: 8px;
 }
+.panel > header .band-legend {
+  padding-top: 0; /* the Arousal graph's names, in the line of its title */
+}
 
 /* ---------- streams ---------- */
 .streams {
