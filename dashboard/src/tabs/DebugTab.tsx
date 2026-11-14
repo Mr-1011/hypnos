@@ -4,13 +4,36 @@ import { useMuse } from '../lib/muse'
 import { usePolar } from '../lib/polar'
 import type { LinkState } from '../lib/sse'
 import { Panel, Seg, hms } from '../components/Panel'
+import { BandTab } from './BandTab'
+import { MuseTab } from './MuseTab'
+import { PolarTab } from './PolarTab'
 
 type Prog = 'band' | 'muse' | 'polar'
 const NAME: Record<Prog, string> = { band: 'Band', muse: 'Muse', polar: 'Polar' }
 
+const VIEWS = ['Programs', 'Band', 'Muse', 'Polar'] as const
+
+// Everything that is about one device and not about the person (the user's rule, 2026-11-14): the
+// programs' health, and each device's own numbers and slow charts. One view at a time, so only its
+// canvases draw.
+export function DebugTab() {
+  const [view, setView] = useState<(typeof VIEWS)[number]>('Programs')
+  return (
+    <>
+      <div className="views">
+        <Seg value={view} options={[...VIEWS]} onChange={setView} />
+      </div>
+      {view === 'Programs' ? <Programs /> : null}
+      {view === 'Band' ? <BandTab /> : null}
+      {view === 'Muse' ? <MuseTab /> : null}
+      {view === 'Polar' ? <PolarTab /> : null}
+    </>
+  )
+}
+
 // Every number that says why something is not working: each program's link history and the three
 // event logs in one timeline.
-export function DebugTab() {
+function Programs() {
   const bd = useBand()
   const mu = useMuse()
   const po = usePolar()

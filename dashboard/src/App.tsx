@@ -7,13 +7,10 @@ import { course } from './lib/course'
 import { muse, museApi, useMuse } from './lib/muse'
 import { polar, polarApi, usePolar } from './lib/polar'
 import { post } from './lib/sse'
-import { BandTab } from './tabs/BandTab'
-import { MuseTab } from './tabs/MuseTab'
 import { LiveTab } from './tabs/LiveTab'
-import { PolarTab } from './tabs/PolarTab'
 import { DebugTab } from './tabs/DebugTab'
 
-const TABS = ['Live', 'Band', 'Muse', 'Polar', 'Debug'] as const
+const TABS = ['Live', 'Debug'] as const
 type Tab = (typeof TABS)[number]
 
 function savedTab(): Tab {
@@ -135,9 +132,6 @@ export default function App() {
       </header>
       <Cards />
       {tab === 'Live' ? <LiveTab /> : null}
-      {tab === 'Band' ? <BandTab /> : null}
-      {tab === 'Muse' ? <MuseTab /> : null}
-      {tab === 'Polar' ? <PolarTab /> : null}
       {tab === 'Debug' ? <DebugTab /> : null}
     </div>
   )

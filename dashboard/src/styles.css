@@ -247,6 +247,10 @@ h2 {
 .seg {
   display: inline-flex;
 }
+/* the Debug tab's views, over its panels */
+.views {
+  margin-top: 12px;
+}
 .seg button {
   height: 24px;
   padding: 0 8px;

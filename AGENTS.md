@@ -182,7 +182,9 @@ keys are read from `.env` at each start. Its docstring is the reference.
   `POST /api/record` on each sensor program (README, Record).
 - The Live tab is one screen with no page scroll (`.app.fit` in `styles.css`): the Sleep State graph
   beside the Memory card, whose lower part is the transcript, and three traces under them. Only
-  that first row changes its height. A new panel goes on a device tab, or it replaces one on Live.
+  that first row changes its height. The tabs for one device are views of the Debug tab
+  (`tabs/DebugTab.tsx`; the user's rule, 2026-11-14). A new panel goes into one of them, or it
+  replaces one on Live.
 - `src/lib/course.ts` samples every 2 s how much the body moves and how loud it is at the band's
   microphone (the band program's `sound`, which is null while the microphone is off), each from 0
   to 1, the heart rate (the Polar's, or else the Muse's), the agent's stage of sleep and the
