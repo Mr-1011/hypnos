@@ -12,6 +12,7 @@ export interface BandState extends LinkState {
 }
 
 export interface BandStats {
+  sound: number | null // dB under full scale: the microphone's level since the last stats; null while it is off
   move: number | null // mg: the spread of |a| over the last 2 s, the Muse's movement number
   hz: number // motion samples a second that arrive
   lost: number
@@ -36,6 +37,7 @@ class BandLive {
   state: BandState | null = null
   stats: BandStats | null = null
   statsSeq = 0
+  loud: number | null = null // the loudest `sound` since course.ts took it: four stats come for each of its samples
   partial = '' // the guess for the sentence that is being spoken; it may still change
   // the Live tab's 20 s view, plus the playhead's lag behind the newest sample
   readonly acc = [0, 1, 2].map(() => new Ring(MOTION_HZ * 21))
@@ -58,6 +60,7 @@ class BandLive {
         return false
       case 'stats':
         this.stats = m
+        if (m.sound !== null) this.loud = Math.max(this.loud ?? -Infinity, m.sound)
         this.statsSeq++
         return true
       case 'state':

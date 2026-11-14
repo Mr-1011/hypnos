@@ -1,10 +1,11 @@
 import { agent } from './agent'
 import { band } from './band'
 import { muse } from './muse'
+import { polar } from './polar'
 import { simNight } from './sim'
 
-// What the Sleep State graph of the Live tab draws: every 2 s how much the body moves and how much
-// is said, each from 0 to 1, the stage of sleep, and the spectrum of the EEG.
+// What the Sleep State graph of the Live tab draws: every 2 s how much the body moves and how loud
+// it is, each from 0 to 1, the heart rate, the stage of sleep, and the spectrum of the EEG.
 // shortcut: the page holds this history, so a reload starts the graph again. When a night has to
 // survive the tab, agent/voice.py keeps it (it already follows every sensor) and serves it.
 // shortcut: the first SIM_H hours are made up for the demo (sim.ts), and the graph's clock is moved
@@ -17,7 +18,8 @@ export type Stage = (typeof STAGES)[number]
 export interface Sample {
   t: number // utc ms
   move: number | null // the larger of wrist and head movement, on a log scale
-  talk: number // the words of the last half minute, the person's and the agent's
+  sound: number | null // how loud it is at the band's microphone, on its dB scale; null while it is off
+  heart: number | null // beats a minute: the chest strap's, or else the Muse's
   stage: Stage | null // the agent's verdict (agent/sleep.py)
   // the EEG's power in each 1 Hz bin from 1 Hz to SPEC_HZ, from 0 (SPEC_DB[0]) to 255 (SPEC_DB[1])
   spec: Uint8ClampedArray | null
@@ -32,10 +34,10 @@ const SPEC_DB = [-10, 30]
 const SIM_H = 4
 const STILL_MG = 2 // a wrist at rest reads 1 to 5 mg (the spread of |a| over 2 s): 0 on the graph
 const WALK_MG = 200 // and a walking one some hundred: 1 on the graph
-const TALK_MS = 30_000
-const TALK_WORDS = 60 // a steady talk is about 120 words a minute: 1 on the graph
-
-const words = (text: string) => text.split(/\s+/).filter(Boolean).length
+// dB under full scale at the band's microphone, measured 2026-11-14: the pauses of the kit's reader
+// are at -44, the hackathon's hall at -35 to -25 and a voice at -25 to -17
+const QUIET_DB = -50 // 0 on the graph
+const LOUD_DB = -10 // 1 on the graph
 
 // 0 at STILL_MG, 1 at WALK_MG, a log scale between: a turn in bed and a walk both show
 export function moveLevel(mg: number): number {
@@ -48,13 +50,14 @@ function sample(): Sample {
   const moves = [band.online ? band.stats?.move : null, muse.online ? muse.stats?.motion?.move : null].filter((v): v is number => typeof v === 'number')
   const spec = muse.online ? muse.specMean : null // dB in each 1 Hz bin from 0 Hz
   const stage = agent.online ? agent.state?.sleep?.stage : null
-  // the microphone's own lines, or both sides of the talk with the agent: only one of the two listens
-  const said = [...(band.online ? (band.state?.lines ?? []).map(([ts, text]) => [ts, text] as const) : []), ...(agent.online ? (agent.state?.lines ?? []).map(([ts, , text]) => [ts, text] as const) : [])]
-  const spoken = said.filter(([ts]) => now - ts < TALK_MS).reduce((n, [, text]) => n + words(text), 0) + words(agent.partial || band.partial)
+  const loud = band.online ? band.loud : null
+  band.loud = null
+  const beats = [polar.online ? polar.stats?.bpm : null, muse.online ? muse.stats?.hr?.bpm : null].find((v): v is number => typeof v === 'number')
   return {
     t: now,
     move: moves.length ? moveLevel(Math.max(...moves)) : null,
-    talk: Math.min(1, spoken / TALK_WORDS),
+    sound: loud === null ? null : Math.min(1, Math.max(0, (loud - QUIET_DB) / (LOUD_DB - QUIET_DB))),
+    heart: beats ?? null,
     stage: STAGES.find((s) => s === stage) ?? null,
     spec: spec ? Uint8ClampedArray.from({ length: SPEC_HZ }, (_, k) => (255 * (spec[k + 1] - SPEC_DB[0])) / (SPEC_DB[1] - SPEC_DB[0])) : null,
   }

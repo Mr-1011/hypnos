@@ -6,16 +6,22 @@ const TOP = 12 // air over the ribbon
 const PAD = 12 // left and right of the plot
 const RIBBON = 8 // the stage of sleep, along the top
 const NAMES = 20 // the stages' names under the ribbon
-const SPEC_H = 64 // the EEG's spectrogram, under the lines
+const GAP = 6 // under each lane
+const SPEC_H = 64 // the EEG's spectrogram, under the lanes
 const FULL_MS = 8 * 3600_000 // a night: as far out as the graph goes
 const MIN_MS = 60_000 // and as far in: 30 samples
 const FOLLOW_MS = 10 * 60_000 // what a click opens around now
 const TICKS_S = [10, 30, 60, 120, 300, 600, 900, 1800, 3600]
 
-const LINES: { label: string; color: string; get: (s: Sample) => number | null }[] = [
+// A lane for each line, from the top: no line lies on another (the user's rule, 2026-11-14).
+// Movement and sound go from 0 to 1. The heart has no such scale: its lane shows the beats a minute
+// that are in the window (`beat`), so a change of 3 or 4 is seen.
+const LANES: { label: string; color: string; get: (s: Sample) => number | null; bpm?: true }[] = [
   { label: 'movement', color: '#4c9be8', get: (s) => s.move },
-  { label: 'talking', color: '#e0b64d', get: (s) => s.talk },
+  { label: 'sound', color: '#e0b64d', get: (s) => s.sound },
+  { label: 'heart', color: '#f0637e', get: (s) => s.heart, bpm: true },
 ]
+const beat = { lo: 50, hi: 70 } // the heart lane's bottom and top; it eases to the window's range
 
 // Patch's colours for the stages of sleep. Patch has no drowsy: it lies between awake and light.
 const STAGE: Record<Stage, [string, string]> = {
@@ -37,12 +43,18 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
 // the lines end one step before now: the newest sample is still ahead, so they grow into it and do not jump every 2 s
 const head = () => Date.now() - STEP_MS
 
-// the window of a view, in utc ms. The night starts at the first sample; one longer than 8 h shows its last 8.
-function windowOf(v: View): { s: number; w: number } {
+// The night starts at the first sample; one longer than 8 h shows its last 8.
+function night(): number {
   const h = head()
-  const from = Math.max(course.samples[0]?.t ?? h, h - FULL_MS)
+  return Math.max(course.samples[0]?.t ?? h, h - FULL_MS)
+}
+
+// the window of a view, in utc ms. No view goes over the night's two ends, also not one that
+// follows now: there is nothing before the start of sleep.
+function windowOf(v: View): { s: number; w: number } {
+  const from = night()
   if (!v) return { s: from, w: FULL_MS }
-  return { s: v.follow ? h - v.w / 2 : clamp(v.s, from, from + FULL_MS - v.w), w: v.w }
+  return { s: clamp(v.follow ? head() - v.w / 2 : v.s, from, from + FULL_MS - v.w), w: v.w }
 }
 
 // The spectrogram of the window as a picture: a column for each pixel, the mean of the samples in
@@ -100,10 +112,12 @@ function draw(cv: HTMLCanvasElement, s: number, w: number) {
   const ss = course.samples
   const now = head()
   const specTop = H - AXIS - SPEC_H
-  const floor = specTop - 10 // where a line is at 0
-  const ceil = TOP + RIBBON + NAMES // and at 1
+  const lanesTop = TOP + RIBBON + NAMES
+  const laneH = (specTop - lanesTop) / LANES.length - GAP
+  const top = (i: number) => lanesTop + i * (laneH + GAP) // of lane i
   const x = (t: number) => PAD + ((t - s) / w) * (W - 2 * PAD)
-  const y = (v: number) => floor - v * (floor - ceil)
+  // 2 px of air at a lane's two ends: a line at 0 or at 1 is not cut
+  const y = (i: number, v: number) => top(i) + laneH - 2 - clamp(LANES[i].bpm ? (v - beat.lo) / (beat.hi - beat.lo) : v, 0, 1) * (laneH - 4)
   const nowX = x(now)
 
   // the samples in the window and one more on each side, so that everything runs off its edges
@@ -115,13 +129,49 @@ function draw(cv: HTMLCanvasElement, s: number, w: number) {
   let n = ss.length - 1 // the last sample before the head
   while (n >= 0 && ss[n].t > now) n--
 
+  // The night as empty tracks, also the hours that are still to come: the graph goes on into them
+  // (the user's rule, 2026-11-14). The clock's lines go down all of them.
+  const from = night()
+  const n0 = Math.max(0, x(from))
+  const n1 = Math.min(W, x(from + FULL_MS))
+  const tick = (TICKS_S.find((k) => w / (k * 1000) <= 8) ?? 3600) * 1000
+  ctx.fillStyle = 'rgba(255,255,255,0.035)'
+  ctx.fillRect(n0, TOP, n1 - n0, RIBBON + NAMES - GAP) // the ribbon and the names are one track
+  LANES.forEach((_, i) => ctx.fillRect(n0, top(i), n1 - n0, laneH))
+  ctx.fillRect(n0, specTop, n1 - n0, SPEC_H)
+  ctx.fillStyle = 'rgba(255,255,255,0.05)'
+  for (let t = Math.ceil((s + course.shift - 1) / tick) * tick; t <= s + course.shift + w; t += tick) {
+    const tx = Math.round(x(t - course.shift))
+    if (tx >= n0 && tx <= n1) ctx.fillRect(tx, TOP, 1, specTop + SPEC_H - TOP)
+  }
+
+  // the heart lane's range: the beats a minute in the window, on fives, and never under 20 of them
+  let lo = Infinity
+  let hi = -Infinity
+  for (let i = a; i <= Math.min(b, n); i++) {
+    const v = ss[i].heart
+    if (v === null) continue
+    lo = Math.min(lo, v)
+    hi = Math.max(hi, v)
+  }
+  if (lo <= hi) {
+    lo = Math.floor(lo / 5) * 5
+    hi = Math.ceil(hi / 5) * 5
+    while (hi - lo < 20) {
+      hi += 5
+      if (hi - lo < 20) lo -= 5
+    }
+    beat.lo += (lo - beat.lo) * 0.2
+    beat.hi += (hi - beat.hi) * 0.2
+  }
+
   // everything measured ends at the head
   ctx.save()
   ctx.beginPath()
   ctx.rect(0, 0, nowX, H)
   ctx.clip()
 
-  // The stage of sleep as on Patch's night chart: a tint behind the lines, a ribbon along the top
+  // The stage of sleep as on Patch's night chart: a tint in each lane, a ribbon along the top
   // and the name where it fits. The stage of now is the colour at the head: it has no label of its
   // own (the user's rule, 2026-11-14).
   ctx.font = '10px system-ui, -apple-system, sans-serif'
@@ -135,7 +185,7 @@ function draw(cv: HTMLCanvasElement, s: number, w: number) {
       const x1 = Math.min(j < ss.length ? x(ss[j].t) : nowX, nowX)
       ctx.fillStyle = STAGE[stage][0]
       ctx.globalAlpha = 0.18
-      ctx.fillRect(x0, TOP, x1 - x0, floor - TOP)
+      LANES.forEach((_, k) => ctx.fillRect(x0, top(k), x1 - x0, laneH))
       ctx.globalAlpha = 1
       ctx.fillRect(x0, TOP, x1 - x0, RIBBON)
       const from = Math.max(x0, 0)
@@ -148,39 +198,28 @@ function draw(cv: HTMLCanvasElement, s: number, w: number) {
   }
   ctx.textAlign = 'left'
 
-  // calm at the bottom, awake at the top: a line at the bottom and one half way
-  ctx.lineWidth = 1
-  ctx.strokeStyle = 'rgba(255,255,255,0.06)'
-  for (const g of [0, 0.5]) {
-    const yy = Math.round(y(g)) + 0.5
-    ctx.beginPath()
-    ctx.moveTo(0, yy)
-    ctx.lineTo(W, yy)
-    ctx.stroke()
-  }
-
   const every = Math.max(1, Math.ceil((b - a) / (W * 2))) // more samples than pixels: every n-th is drawn
   const a0 = a - (a % every) // the same samples on every frame, or the lines shimmer while the window moves
-  for (const line of LINES) {
-    ctx.strokeStyle = line.color
+  LANES.forEach((lane, k) => {
+    ctx.strokeStyle = lane.color
     ctx.lineWidth = 1.5
     ctx.lineJoin = 'round'
     ctx.beginPath()
     let pen = false
     for (let i = a0; i <= b; i += every) {
-      const v = line.get(ss[i])
+      const v = lane.get(ss[i])
       if (v === null) {
         pen = false
         continue
       }
-      if (pen) ctx.lineTo(x(ss[i].t), y(v))
+      if (pen) ctx.lineTo(x(ss[i].t), y(k, v))
       else {
-        ctx.moveTo(x(ss[i].t), y(v))
+        ctx.moveTo(x(ss[i].t), y(k, v))
         pen = true
       }
     }
     ctx.stroke()
-  }
+  })
 
   // the brain as on Patch: the EEG's spectrogram, 1 Hz at the bottom to 32 Hz at the top, bright is loud
   if (ss.length) {
@@ -190,13 +229,19 @@ function draw(cv: HTMLCanvasElement, s: number, w: number) {
   ctx.restore()
 
   // the clock; course.shift moves it for the made-up night
-  const tick = (TICKS_S.find((n) => w / (n * 1000) <= 8) ?? 3600) * 1000
   ctx.font = '10px ui-monospace, Menlo, monospace'
   ctx.fillStyle = 'rgba(255,255,255,0.42)'
   for (let t = Math.ceil((s + course.shift - 1) / tick) * tick; t <= s + course.shift + w; t += tick) { // - 1: the left edge's own label
     const label = new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: tick < 60_000 ? '2-digit' : undefined, hour12: false })
     ctx.fillText(label, clamp(x(t - course.shift) - ctx.measureText(label).width / 2, 4, W - 4 - ctx.measureText(label).width), H - 6)
   }
+
+  // the heart lane's scale, at its right end
+  const heart = LANES.findIndex((l) => l.bpm)
+  ctx.textAlign = 'right'
+  ctx.fillText(`${Math.round(beat.hi)} bpm`, W - PAD - 4, top(heart) + 11)
+  ctx.fillText(`${Math.round(beat.lo)}`, W - PAD - 4, top(heart) + laneH - 4)
+  ctx.textAlign = 'left'
 
   if (n < 0) return
   // now: a line down the graph, and a dot where each line is (between the two samples around the head)
@@ -207,22 +252,22 @@ function draw(cv: HTMLCanvasElement, s: number, w: number) {
   ctx.stroke()
   const p = ss[n]
   const q = ss[n + 1] ?? p
-  for (const line of LINES) {
-    const vp = line.get(p)
-    const vq = line.get(q)
-    if (vp === null || vq === null) continue
-    ctx.fillStyle = line.color
+  LANES.forEach((lane, k) => {
+    const vp = lane.get(p)
+    const vq = lane.get(q)
+    if (vp === null || vq === null) return
+    ctx.fillStyle = lane.color
     ctx.beginPath()
-    ctx.arc(nowX, y(vp + (vq - vp) * (q === p ? 0 : (now - p.t) / (q.t - p.t))), 3, 0, 2 * Math.PI)
+    ctx.arc(nowX, y(k, vp + (vq - vp) * (q === p ? 0 : (now - p.t) / (q.t - p.t))), 3, 0, 2 * Math.PI)
     ctx.fill()
-  }
+  })
 }
 
 // the names for the panel's header: the colour is a box, the text is the page's
 export function Legend() {
   return (
     <div className="band-legend">
-      {LINES.map((l) => (
+      {LANES.map((l) => (
         <span key={l.label}>
           <i style={{ background: l.color }} />
           {l.label}
@@ -240,11 +285,12 @@ export function Legend() {
   )
 }
 
-// How awake the person is, as one graph: how much the body moves, how fast the brain runs and how
-// much is said, each from calm at the bottom to awake at the top, on one clock. Zoomed all the way
-// out it is a night of 8 hours. A pinch or Cmd and a scroll zooms about the cursor and a sideways
-// swipe or Shift and a scroll pans, as on Patch's night chart. A click follows: now stays in the
-// middle. A second click goes back to the night.
+// How awake the person is, as one graph on one clock: the stage of sleep along the top, then a
+// lane each for how much the body moves, how loud it is and how fast the heart beats, calm at the
+// bottom of each, and the brain's spectrogram. Zoomed all the way out it is a night of 8 hours. A
+// pinch or Cmd and a scroll zooms about the cursor and a sideways swipe or Shift and a scroll
+// pans, as on Patch's night chart. A click follows: now stays in the middle. A second click goes
+// back to the night.
 export function Course() {
   const ref = useRef<HTMLCanvasElement>(null)
   const view = useRef<View>(null)
@@ -301,7 +347,7 @@ export function Course() {
 
   return (
     <div className="course">
-      <canvas ref={ref} onClick={click} role="img" aria-label="Sleep state over time: how much the body moves, how fast the brain runs and how much is said" />
+      <canvas ref={ref} onClick={click} role="img" aria-label="Sleep state over time: the stage of sleep, how much the body moves, how loud it is, the heart rate and the brain's spectrum" />
     </div>
   )
 }
