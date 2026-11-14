@@ -60,7 +60,7 @@ search again.
 ## Transcript
 
 The lower part of the **Memory** card in the Live tab shows what the band's microphone hears as
-text, while people speak, and what the agent answers. There is no switch for it: the agent listens
+text, while people speak, and what the agent answers: one line, the newest. There is no switch for it: the agent listens
 when the band is linked (see Agent). The sound goes over the internet to Deepgram, a company: tell
 the people near the band first, and switch the band off on its card when someone asks. The band's
 light is solid blue while the microphone is on. With `./run.sh --sim` the pretend band plays a

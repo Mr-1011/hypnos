@@ -161,7 +161,7 @@ h1 {
 /* ---------- the Live tab: one screen ---------- */
 /* The top bar, the cards and the traces keep their height. The row of the Sleep State graph and the
    Memory card takes what is left: the graph and the Memory picture fill it, the transcript keeps
-   a few lines. A narrow or low window gets the ordinary scrolling page: there the row would be
+   its one line. A narrow or low window gets the ordinary scrolling page: there the row would be
    too low to read. */
 @media (min-width: 1101px) and (min-height: 740px) {
   .app.fit {
@@ -911,38 +911,34 @@ button.on {
 }
 
 /* ---------- Transcript ---------- */
-/* the lower part of the Memory card: the lines */
+/* the lower part of the Memory card: one line of words, cut where the card ends */
 .talk {
   display: flex;
-  flex: 1 1 0;
-  flex-direction: column;
+  flex: none;
+  gap: 12px;
+  height: 40px;
+  padding: 10px 12px;
   border-top: 1px solid var(--line);
-}
-/* no height of its own: it takes what the card has left, so the charts below do not move with
-   every sentence */
-.said {
-  flex: 1 1 0;
-  min-height: 84px;
-  font-family: inherit;
   font-size: 14px;
-}
-.said time {
-  min-width: 60px; /* the guess row has no time: its text lines up with the settled lines */
-  font-family: var(--mono);
-  font-size: 12px;
   line-height: 20px;
+  white-space: nowrap;
 }
-.said span {
-  color: var(--text);
+.talk b {
+  flex: none;
+  font-weight: 600;
 }
-.said .guess span {
+.talk b.you {
   color: var(--text-3);
 }
-.said b.you {
-  color: var(--text-3);
-}
-.said b.agent {
+.talk b.agent {
   color: var(--eeg);
+}
+.talk span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.talk span.guess {
+  color: var(--text-3);
 }
 
 /* ---------- the Sleep State graph ---------- */
