@@ -12,7 +12,7 @@ interface Props {
 }
 
 // One device: its link, its few health numbers, and a switch. On links the remembered device, or
-// the first one a search finds; off unlinks and forgets it, so Start night leaves it out.
+// the first one a search finds; off unlinks and forgets it.
 export function DeviceCard({ title, online, st, facts, api, recording }: Props) {
   const [busy, setBusy] = useState(false)
   const [miss, setMiss] = useState('') // why the last switch-on found nothing

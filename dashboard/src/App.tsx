@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { NightBar } from './components/NightBar'
 import { DeviceCard } from './components/DeviceCard'
 import { type Tone } from './components/Panel'
 import { agent } from './lib/agent'
@@ -104,7 +103,13 @@ export default function App() {
 
   return (
     <div className={tab === 'Live' ? 'app fit' : 'app'}>
-      <NightBar>
+      <header className="top">
+        <div className="brand">
+          <svg className="mark" viewBox="0 0 24 24" width={22} height={22} aria-hidden="true">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="#e0b64d" />
+          </svg>
+          <h1>Hypnos</h1>
+        </div>
         <nav className="tabs">
           {TABS.map((t) => (
             <button key={t} className={t === tab ? 'on' : ''} onClick={() => setTab(t)}>
@@ -112,7 +117,7 @@ export default function App() {
             </button>
           ))}
         </nav>
-      </NightBar>
+      </header>
       <Cards />
       {tab === 'Live' ? <LiveTab /> : null}
       {tab === 'Band' ? <BandTab /> : null}

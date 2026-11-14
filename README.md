@@ -132,6 +132,11 @@ numbers are set for a demo by day (`agent/brain.py`, `CALM_GAP_S` in `agent/voic
 
 ## Record
 
-**Start night** records every device that is switched on, under one label, into `data/`
-(git ignores it): `band-<label>/motion.csv`, `muse-<label>/muse.bin`, `polar-<label>/raw/*.csv`.
-**Stop night** ends it.
+The page has no record button. Each sensor program records on a command, under the label you
+give it, into `data/` (git ignores it): `band-<label>/motion.csv`, `muse-<label>/muse.bin`,
+`polar-<label>/raw/*.csv`.
+
+```bash
+# 5301 is the Muse, 5302 the Polar, 5303 the band; {"on": false} ends the recording
+curl -H 'Content-Type: application/json' -d '{"on": true, "label": "20261114-2300"}' http://127.0.0.1:5303/api/record
+```

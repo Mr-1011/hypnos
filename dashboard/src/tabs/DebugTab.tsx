@@ -2,10 +2,10 @@ import { useMemo, useState } from 'react'
 import { useBand } from '../lib/band'
 import { useMuse } from '../lib/muse'
 import { usePolar } from '../lib/polar'
-import type { Prog } from '../lib/night'
 import type { LinkState } from '../lib/sse'
 import { Panel, Seg, hms } from '../components/Panel'
 
+type Prog = 'band' | 'muse' | 'polar'
 const NAME: Record<Prog, string> = { band: 'Band', muse: 'Muse', polar: 'Polar' }
 
 // Every number that says why something is not working: each program's link history and the three
