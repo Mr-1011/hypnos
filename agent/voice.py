@@ -240,7 +240,8 @@ class Voice(LiveServer):
         # shortcut: a long day is cut to its last 12000 characters, about an hour of speech; have Gemini
         # write the notes through the day when days get longer than that.
         system = (HERE / "prompt.md").read_text() + time.strftime("\nToday is %A, %Y-%m-%d. It is %H:%M.\n") + (
-            f"\n# Your notes about this person\n\n{brain.notes()}\n# What the band heard today\n\n{brain.day_text(self.day)[-12000:]}")
+            f"\n# Your notes about this person\n\n{brain.notes()}\n# What the band heard today\n\n{brain.day_text(self.day)[-12000:]}"
+            + "".join(f"\n# Their {name}\n\n{text}" for name, text in brain.sources().items()))
         stt = DeepgramFluxSTTService(api_key=keys["DEEPGRAM_API_KEY"], mip_opt_out=True)
         # thinking: measured 2026-11-14 with this prompt. Google's default thinks 7 to 10 s before the first
         # word, "low" 2 to 3 s; "minimal" is refused for this model, and a budget of 0 is no faster than low.

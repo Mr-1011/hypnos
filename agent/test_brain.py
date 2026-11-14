@@ -29,8 +29,12 @@ class Brain(unittest.TestCase):
             self.assertTrue(text.endswith("**you**: Long.\n"))
 
     def test_the_graph_links_a_line_to_the_days_it_names(self):
-        with tempfile.TemporaryDirectory() as d, mock.patch.object(brain, "DIR", Path(d)):
-            self.assertEqual([n["id"] for n in brain.graph()["nodes"]], ["person"])  # an empty brain
+        calendar = {"calendar": "# made up\n- 2026-11-15 09:30 Call with the investor\n"}
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(brain, "DIR", Path(d)), \
+                mock.patch.object(brain, "sources", return_value=calendar):
+            g = brain.graph()  # an empty brain: the person and what they are connected to
+            self.assertEqual([n["kind"] for n in g["nodes"]], ["person", "source", "item", "day"])
+            self.assertIn(["calendar/2026-11-15 09:30 Call with the investor", "2026-11-15"], g["links"])
             brain.note("2026-11-14", 0, "you", "Long.")
             (Path(d) / "person.md").write_text(
                 "# The person\n\n## Coming up\n- The pitch, 2026-11-15\n\n## Days\n- 2026-11-14: a long day\n")
@@ -51,7 +55,7 @@ class Brain(unittest.TestCase):
             asked.update(questions)
             return NS(answers={k: NS(noul=0.9 if "pitch" in q["instructions"] else 0.1) for k, q in questions.items()})
 
-        with tempfile.TemporaryDirectory() as d, mock.patch.object(brain, "DIR", Path(d)):
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(brain, "DIR", Path(d)), mock.patch.object(brain, "sources", return_value={}):
             (Path(d) / "person.md").write_text("## Coming up\n- The pitch, 2026-11-15\n\n## What helps\n- The walk\n\n## Days\n- 2026-11-14: long\n")
             got = asyncio.run(brain.sense(NS(aio=NS(decisions=NS(create=create))), "person: I am not ready.", "Sensors: none."))
         self.assertEqual(len(asked), 3)  # two notes and worried: the Days lines are not asked about

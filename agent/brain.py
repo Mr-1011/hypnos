@@ -55,27 +55,36 @@ def day_text(day):
     return f.read_text() if f.exists() else ""
 
 
+def sources():
+    """What the agent is connected to besides the band, as {name: a Markdown list}.
+    shortcut: made-up files in agent/mock/ (calendar.md, mail.md; one more file is one more source),
+    replace them with the person's real calendar and mail when there is a login for those."""
+    return {f.stem: f.read_text() for f in sorted((HERE / "mock").glob("*.md"))}
+
+
 def graph():
-    """The brain as nodes and links, for the page: the person, the headings of the notes, their
-    lines, and the days. A line that names a date is linked to that day."""
+    """The brain as nodes and links, for the page: the person, the headings of the notes and their
+    lines, the connected sources and their items, and the days. A line or an item that names a
+    date is linked to that day."""
     nodes = {"person": {"id": "person", "label": "the person", "kind": "person"}}
     links = []
     for f in sorted((DIR / "days").glob("*.md")):
         nodes[f.stem] = {"id": f.stem, "label": f.stem, "kind": "day"}
         links.append(["person", f.stem])
-    head = None
-    for line in notes().splitlines():
-        text = line.strip().lstrip("-* ").strip()
-        if line.startswith("## "):
-            head = line[3:].strip()
-            nodes[head] = {"id": head, "label": head, "kind": "head"}
-            links.append(["person", head])
-        elif head and text and not line.startswith("#"):
-            nodes[f"{head}/{text}"] = {"id": f"{head}/{text}", "label": text, "kind": "line"}
-            links.append([head, f"{head}/{text}"])
-            for day in set(re.findall(r"\d{4}-\d{2}-\d{2}", text)):
-                nodes.setdefault(day, {"id": day, "label": day, "kind": "day"})  # a day with no talk yet: one that comes
-                links.append([f"{head}/{text}", day])
+    for hub, leaf, doc in [("head", "line", notes())] + [("source", "item", f"## {name}\n{text}") for name, text in sources().items()]:
+        head = None
+        for line in doc.splitlines():
+            text = line.strip().lstrip("-* ").strip()
+            if line.startswith("## "):
+                head = line[3:].strip()
+                nodes[head] = {"id": head, "label": head, "kind": hub}
+                links.append(["person", head])
+            elif head and text and not line.startswith("#"):
+                nodes[f"{head}/{text}"] = {"id": f"{head}/{text}", "label": text, "kind": leaf}
+                links.append([head, f"{head}/{text}"])
+                for day in set(re.findall(r"\d{4}-\d{2}-\d{2}", text)):
+                    nodes.setdefault(day, {"id": day, "label": day, "kind": "day"})  # a day with no talk yet: one that comes
+                    links.append([f"{head}/{text}", day])
     return {"nodes": list(nodes.values()), "links": links}
 
 
@@ -85,10 +94,11 @@ def restless(moves):
 
 
 async def sense(client, said, body):
-    """What the decisions model makes of this moment: the notes that the person's words touch, and
+    """What the decisions model makes of this moment: the notes and the items of the connected
+    sources that the person's words touch, and
     whether they sound worried. said: the last lines of the talk. body: the stage of sleep and the
     sensors' numbers, in words. client: a genai.Client, held by the caller."""
-    lines = [n for n in graph()["nodes"] if n["kind"] == "line" and not n["id"].startswith("Days/")]
+    lines = [n for n in graph()["nodes"] if n["kind"] in ("line", "item") and not n["id"].startswith("Days/")]
     questions = {f"n{i}": {"type": "noul", "instructions": f"The person's last words are about this: {n['label']}"}
                  for i, n in enumerate(lines)}
     questions["worried"] = {"type": "noul", "instructions": "The person sounds worried or tense."}
