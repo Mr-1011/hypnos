@@ -143,18 +143,21 @@ wrist tracker scores sleep. The rules were set by hand and no night was held aga
 prototype's estimate, not a sleep lab's.
 
 The **Sleep State** graph in the Live tab draws the night on one clock. Along the top is the stage
-of sleep, in colours, with the stage of now named at the line of now. Under it are two lines, calm
-at the bottom: how much the body moves (wrist and head) and how much is said. At the bottom is the
-brain: the spectrogram of the EEG from 1 to 32 Hz, dark violet where it is quiet and yellow where
-it is loud, so deep sleep is a bright band at the bottom and a move is a stripe over every
-frequency. Zoomed all the way out the graph is a night of 8 hours. A pinch, or Cmd and a scroll,
-zooms; a sideways swipe pans; a click follows, with now in the middle, and a second click goes
-back to the night.
+of sleep, in colours. Under it are three lanes, calm at the bottom of each: how much the body
+moves (wrist and head), how loud it is at the band's microphone (while the microphone is on), and
+the heart rate, from the chest strap or else from the Muse. The heart's lane shows only the beats
+a minute that are in view, with the two numbers at its right end, so a change of 3 or 4 beats is
+seen. At the bottom is the brain: the spectrogram of the EEG from 1 to 32 Hz, dark violet where
+it is quiet and yellow where it is loud, so deep sleep is a bright band at the bottom and a move
+is a stripe over every frequency. Zoomed all the way out the graph is a night of 8 hours, and the
+hours still to come are empty tracks. A pinch, or Cmd and a scroll, zooms; a sideways swipe pans;
+a click follows, with now in the middle, and a second click goes back to the night. No view goes
+back before the start of the night.
 
 **The first four hours of that night are made up, for the demo.** The page opens in the middle of
 a night that began at 00:00: two cycles of sleep, and two moments in them (one with movement and
-a few words, one with movement only). They come from `dashboard/src/lib/sim.ts`. Everything right
-of the line of now is measured. Set `SIM_H` in `dashboard/src/lib/course.ts` to 0 for a graph
+a few words, one with movement only; the heart jumps at both). They come from
+`dashboard/src/lib/sim.ts`. Only what the graph draws after the page opened is measured. Set `SIM_H` in `dashboard/src/lib/course.ts` to 0 for a graph
 that begins when the page opens, on the real clock. A reload of the page starts the graph again.
 
 While the agent is on, the sensors make it speak without being asked,
