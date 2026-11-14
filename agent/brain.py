@@ -11,6 +11,7 @@ text with every talk, like the talk itself.
 
     cd agent && ../.venv/bin/python -m unittest test_brain
 """
+import re
 import time
 from pathlib import Path
 
@@ -43,6 +44,30 @@ def note(day, ts, who, text):
 def notes():
     f = DIR / "person.md"
     return f.read_text() if f.exists() else ""
+
+
+def graph():
+    """The brain as nodes and links, for the page: the person, the headings of the notes, their
+    lines, and the days. A line that names a date is linked to that day."""
+    nodes = {"person": {"id": "person", "label": "the person", "kind": "person"}}
+    links = []
+    for f in sorted((DIR / "days").glob("*.md")):
+        nodes[f.stem] = {"id": f.stem, "label": f.stem, "kind": "day"}
+        links.append(["person", f.stem])
+    head = None
+    for line in notes().splitlines():
+        text = line.strip().lstrip("-* ").strip()
+        if line.startswith("## "):
+            head = line[3:].strip()
+            nodes[head] = {"id": head, "label": head, "kind": "head"}
+            links.append(["person", head])
+        elif head and text and not line.startswith("#"):
+            nodes[f"{head}/{text}"] = {"id": f"{head}/{text}", "label": text, "kind": "line"}
+            links.append([head, f"{head}/{text}"])
+            for day in set(re.findall(r"\d{4}-\d{2}-\d{2}", text)):
+                nodes.setdefault(day, {"id": day, "label": day, "kind": "day"})  # a day with no talk yet: one that comes
+                links.append([f"{head}/{text}", day])
+    return {"nodes": list(nodes.values()), "links": links}
 
 
 def restless(moves):

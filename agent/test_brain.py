@@ -25,3 +25,19 @@ class Brain(unittest.TestCase):
             self.assertTrue(text.startswith("# 2026-11-14\n"))
             self.assertEqual(text.count("\n- "), 2)
             self.assertTrue(text.endswith("**you**: Long.\n"))
+
+    def test_the_graph_links_a_line_to_the_days_it_names(self):
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(brain, "DIR", Path(d)):
+            self.assertEqual([n["id"] for n in brain.graph()["nodes"]], ["person"])  # an empty brain
+            brain.note("2026-11-14", 0, "you", "Long.")
+            (Path(d) / "person.md").write_text(
+                "# The person\n\n## Coming up\n- The pitch, 2026-11-15\n\n## Days\n- 2026-11-14: a long day\n")
+            g = brain.graph()
+            kinds = {n["id"]: n["kind"] for n in g["nodes"]}
+            self.assertEqual(kinds["Coming up"], "head")
+            self.assertEqual(kinds["Coming up/The pitch, 2026-11-15"], "line")
+            self.assertEqual(kinds["2026-11-15"], "day")  # named in the notes, no talk on it
+            self.assertIn(["Coming up/The pitch, 2026-11-15", "2026-11-15"], g["links"])
+            self.assertIn(["Days/2026-11-14: a long day", "2026-11-14"], g["links"])
+            self.assertIn(["person", "2026-11-14"], g["links"])
+            self.assertNotIn(["person", "2026-11-15"], g["links"])

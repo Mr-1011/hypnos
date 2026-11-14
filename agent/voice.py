@@ -19,7 +19,8 @@ nobody asking: the cue goes to Gemini like a line of the talk, and the notes say
     ./run.sh                 starts it with the three sensor programs
 
 API on 127.0.0.1:5304 (the page reaches it as /api/agent):
-    GET  /api/stream   server-sent events: state, text ({who: "you" | "agent", text, final})
+    GET  /api/stream   server-sent events: state, text ({who: "you" | "agent", text, final}).
+                       The state carries the brain as nodes and links (brain.graph), for the page.
     GET  /api/state
     POST /api/talk     {"on": true} | {"on": false}; the answer has ok and, when refused, err
 
@@ -166,7 +167,7 @@ class Voice(LiveServer):
         self.google = None   # the key the talk started with, for the notes at its end
 
     def state(self):
-        return {"t": "state", "on": bool(self.worker), "err": self.err, "lines": list(self.lines)}
+        return {"t": "state", "on": bool(self.worker), "err": self.err, "lines": list(self.lines), "brain": brain.graph()}
 
     def said(self, who, text, final=True):
         ts = int(time.time() * 1000)
@@ -268,6 +269,7 @@ class Voice(LiveServer):
         if self.heard:
             try:
                 await brain.reflect(self.google, MODEL, self.day)
+                self.push_state()  # the page draws the new notes
             except Exception as e:  # no credit, no internet: the talk is in the day's file, the notes stay as they were
                 self.err = f"The notes were not written: {str(e)[:200] or type(e).__name__}"
                 self.push_state()
