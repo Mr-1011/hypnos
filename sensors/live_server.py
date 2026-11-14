@@ -435,7 +435,7 @@ class BleLink(LiveServer):
             self.ensure_link()
 
     async def autoconnect(self):
-        """The page's Connect all: the remembered device, else the strongest one a scan finds."""
+        """The switch on a card of the page: the remembered device, else the strongest one a scan finds."""
         if self.want:
             self.ensure_link()
             return {"ok": 1, "address": self.want}

@@ -28,14 +28,3 @@ async function record(progs: Prog[], on: boolean, label?: string): Promise<Error
 export const startNight = (progs: Prog[], label = nightLabel()) => record(progs, true, label)
 
 export const stopNight = () => record(PROGS, false)
-
-// Connect all: each program links its remembered device, or the first one a search finds
-export async function connectAll(): Promise<Errors> {
-  const res = await Promise.all(PROGS.map((p) => post(`/api/${p}`, '/autoconnect')))
-  const errors: Errors = {}
-  res.forEach((r, i) => {
-    const e = failed(r)
-    if (e) errors[PROGS[i]] = e
-  })
-  return errors
-}

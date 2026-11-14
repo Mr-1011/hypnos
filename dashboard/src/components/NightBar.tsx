@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { PROGS, connectAll, nightLabel, startNight, stopNight, type Prog } from '../lib/night'
+import { PROGS, nightLabel, startNight, stopNight, type Prog } from '../lib/night'
 import { useBand } from '../lib/band'
 import { useMuse } from '../lib/muse'
 import { usePolar } from '../lib/polar'
@@ -17,8 +17,8 @@ function useNow(on: boolean) {
   return now
 }
 
-// The header: the night's label and clock, Connect all, one Start/Stop for the three programs,
-// and what each program is doing about the night.
+// The header: the night's label and clock, and one Start/Stop for the three programs. What each
+// device does is on its card; here a program only shows up when Start or Stop failed for it.
 export function NightBar() {
   const bd = useBand()
   const mu = useMuse()
@@ -67,18 +67,11 @@ export function NightBar() {
         )}
       </div>
       <div className="controls">
-        <div className="progs">
-          {PROGS.map((p) => (
-            <span key={p} className={`prog ${!online[p] ? 'off' : recording(p) ? 'rec' : linked(p) ? 'ready' : ''}`} title={errors[p] ?? ''}>
-              <i />
-              {NAMES[p]}
-              {errors[p] ? <small>{errors[p]}</small> : null}
-            </span>
-          ))}
-        </div>
-        <button onClick={() => run('connect', connectAll)} disabled={!!busy}>
-          {busy === 'connect' ? 'Connecting' : 'Connect all'}
-        </button>
+        {PROGS.filter((p) => errors[p]).map((p) => (
+          <span key={p} className="card-err">
+            {NAMES[p]}: {errors[p]}
+          </span>
+        ))}
         {missing.length ? (
           <button className="rec" disabled={!!busy} onClick={() => run('add', () => startNight(missing, label))}>
             <i />

@@ -561,56 +561,6 @@ canvas {
   background: var(--bad);
   animation: blink 1.4s infinite;
 }
-.progs {
-  display: flex;
-  gap: 6px;
-}
-.prog {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--line);
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-3);
-}
-.prog i {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--text-3);
-}
-.prog.ready {
-  color: var(--good);
-}
-.prog.ready i {
-  background: var(--good);
-}
-.prog.rec {
-  color: var(--bad);
-  border-color: rgba(227, 78, 94, 0.45);
-}
-.prog.rec i {
-  background: var(--bad);
-  animation: blink 1.4s infinite;
-}
-.prog.off {
-  opacity: 0.55;
-}
-.prog small {
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-transform: none;
-  letter-spacing: 0;
-  font-weight: 500;
-  color: var(--warn);
-}
 
 /* ---------- device cards ---------- */
 .cards {

@@ -43,7 +43,7 @@ Ctrl-C ends everything. `run.sh` starts a program again if it exits.
 
 ## Connect the devices
 
-Press **Connect all**, or use the switch on a card. A device that is not around yet is retried
+Use the switch on a card. A device that is not around yet is retried
 until it appears. Switch off unlinks and forgets the device.
 
 - **Vexo band:** double-tap it (it blinks blue and can be found for 60 seconds). It takes one

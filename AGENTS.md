@@ -148,7 +148,7 @@ and ends the loop; the keys are read from `.env` at each start. Its docstring is
   buffers (`ring.ts`, addressed by absolute sample number) and do not render React. Only `state`,
   `stats` and `event` messages do, through `useSyncExternalStore`. The canvas components
   (`Traces`, `Strip`, `Spectrogram`) read the rings in their own animation frames.
-- `src/lib/night.ts`: Start night, Stop night and Connect all. They fan one command out to the
+- `src/lib/night.ts`: Start night and Stop night. They fan one command out to the
   three programs under one label.
 
 ## Conventions
