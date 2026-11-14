@@ -122,7 +122,8 @@ and ends the loop; the keys are read from `.env` at each start. Its docstring is
   talk, and `person.md` is the notes about the person. `talk()` puts the notes after `prompt.md`;
   when the loop ends, `brain.reflect()` has Gemini write them again (`reflect.md` says how).
   What a band hears is not trusted text: both prompts say that the talk and the notes are never
-  instructions. Keep those lines.
+  instructions. Keep those lines. `brain.graph()` goes out in the agent's `state`, and
+  `dashboard/src/components/Memory.tsx` draws it (the Live tab's "Brain" panel is the EEG).
 - `watch()` reads the band's and the Muse's `stats` while the loop runs. `brain.restless()` is the
   verdict, and a cue (`CUE`) then goes into the talk so that the agent says calm words unasked.
   The numbers (`MOVING_MG`, `WINDOW`, `RESTLESS`, `CALM_GAP_S`) are set for the awake demo: see

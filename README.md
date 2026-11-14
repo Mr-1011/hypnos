@@ -93,6 +93,10 @@ and the notes go to Google as text with each talk):
   how). You can write into this file by hand; the notes before the last rewrite stay in
   `person.before.md`.
 
+The **Memory** card in the Live tab draws both as a graph: a dot for each note and each day, and a
+line from a note to the days it names. Point at a dot to read it. A hand edit shows after a
+reload of the page.
+
 While the agent is on it also watches how much the wrist (band) and the head (Muse) move. When
 you do not rest, 10 moving seconds in 30, it says one calm sentence without being asked, about
 what the notes say comes up or weighs on you. It waits two minutes after its last words before it
