@@ -131,7 +131,7 @@ export default function App() {
         </nav>
         <Demo />
       </header>
-      <Cards />
+      {tab === 'Focus' ? null : <Cards />}
       {tab === 'Live' ? <LiveTab /> : null}
       {tab === 'Focus' ? <FocusTab /> : null}
       {tab === 'Debug' ? <DebugTab /> : null}

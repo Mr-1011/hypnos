@@ -7,7 +7,7 @@ const PAD = 12 // left and right of the plot
 const RIBBON = 8 // the stage of sleep, along the top
 const NAMES = 20 // the stages' names under the ribbon
 const GAP = 6 // under each lane
-const SPEC_H = 64 // the EEG's spectrogram, under the lanes: at least this high
+const SPEC_H = 64 // the EEG's spectrogram, under the lanes
 const FULL_MS = 8 * 3600_000 // a night: as far out as the graph goes
 const MIN_MS = 60_000 // and as far in: 30 samples
 const FOLLOW_MS = 10 * 60_000 // what a click opens around now
@@ -111,8 +111,7 @@ function draw(cv: HTMLCanvasElement, s: number, w: number) {
 
   const ss = course.samples
   const now = head()
-  const specH = Math.max(SPEC_H, Math.round(H * 0.16)) // a graph as large as the screen has a spectrogram to match
-  const specTop = H - AXIS - specH
+  const specTop = H - AXIS - SPEC_H
   const lanesTop = TOP + RIBBON + NAMES
   const laneH = (specTop - lanesTop) / LANES.length - GAP
   const top = (i: number) => lanesTop + i * (laneH + GAP) // of lane i
@@ -139,11 +138,11 @@ function draw(cv: HTMLCanvasElement, s: number, w: number) {
   ctx.fillStyle = 'rgba(255,255,255,0.035)'
   ctx.fillRect(n0, TOP, n1 - n0, RIBBON + NAMES - GAP) // the ribbon and the names are one track
   LANES.forEach((_, i) => ctx.fillRect(n0, top(i), n1 - n0, laneH))
-  ctx.fillRect(n0, specTop, n1 - n0, specH)
+  ctx.fillRect(n0, specTop, n1 - n0, SPEC_H)
   ctx.fillStyle = 'rgba(255,255,255,0.05)'
   for (let t = Math.ceil((s + course.shift - 1) / tick) * tick; t <= s + course.shift + w; t += tick) {
     const tx = Math.round(x(t - course.shift))
-    if (tx >= n0 && tx <= n1) ctx.fillRect(tx, TOP, 1, specTop + specH - TOP)
+    if (tx >= n0 && tx <= n1) ctx.fillRect(tx, TOP, 1, specTop + SPEC_H - TOP)
   }
 
   // the heart lane's range: the beats a minute in the window, on fives, and never under 20 of them
@@ -225,7 +224,7 @@ function draw(cv: HTMLCanvasElement, s: number, w: number) {
   // the brain as on Patch: the EEG's spectrogram, 1 Hz at the bottom to 32 Hz at the top, bright is loud
   if (ss.length) {
     ctx.imageSmoothingEnabled = false // as on Patch: every column and every Hz keeps its own colour; smoothed, it was a fog
-    ctx.drawImage(spectrogram(ss, a, b, x, W, `${a} ${b} ${s} ${w} ${W}`), 0, specTop, W, specH)
+    ctx.drawImage(spectrogram(ss, a, b, x, W, `${a} ${b} ${s} ${w} ${W}`), 0, specTop, W, SPEC_H)
   }
   ctx.restore()
 
@@ -249,7 +248,7 @@ function draw(cv: HTMLCanvasElement, s: number, w: number) {
   ctx.strokeStyle = 'rgba(255,255,255,0.22)'
   ctx.beginPath()
   ctx.moveTo(Math.round(nowX) + 0.5, TOP)
-  ctx.lineTo(Math.round(nowX) + 0.5, specTop + specH)
+  ctx.lineTo(Math.round(nowX) + 0.5, specTop + SPEC_H)
   ctx.stroke()
   const p = ss[n]
   const q = ss[n + 1] ?? p
@@ -291,10 +290,10 @@ export function Legend() {
 // bottom of each, and the brain's spectrogram. Zoomed all the way out it is a night of 8 hours. A
 // pinch or Cmd and a scroll zooms about the cursor and a sideways swipe or Shift and a scroll
 // pans, as on Patch's night chart. A click follows: now stays in the middle. A second click goes
-// back to the night. follow: it opens on the minutes around now and not on the night (the Focus tab).
-export function Course({ follow = false }: { follow?: boolean }) {
+// back to the night.
+export function Course() {
   const ref = useRef<HTMLCanvasElement>(null)
-  const view = useRef<View>(follow ? { s: 0, w: FOLLOW_MS, follow: true } : null)
+  const view = useRef<View>(null)
   const cam = useRef<{ s: number; w: number } | null>(null) // the window on the canvas: it eases to the view's
 
   useEffect(() => {

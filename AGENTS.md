@@ -184,11 +184,15 @@ keys are read from `.env` at each start. Its docstring is the reference.
   `POST /api/record` on each sensor program (README, Record).
 - The Live tab is one screen with no page scroll (`.app.fit` in `styles.css`): the Sleep State graph
   beside the Memory card, whose lower part is the transcript, and three traces under them. Only
-  that first row changes its height. The Focus tab is also one screen: only the Sleep State graph,
-  opened on the minutes around now (`<Course follow />`), and the transcript's line (the user's
-  rule, 2026-11-14). The tabs for one device are views of the Debug tab
-  (`tabs/DebugTab.tsx`; the user's rule, 2026-11-14). A new panel goes into one of them, or it
-  replaces one on Live.
+  that first row changes its height. The Focus tab is also one screen, and it shows only how the
+  agent works (the user's rules, 2026-11-14): the Memory card's picture, drawn twice as large
+  (`<Memory scale={2}>`), and the transcript's line, with no device cards, no frame and no title.
+  What was each device's own tab is a part of the Debug tab, one long page with no tabs in it
+  (`tabs/DebugTab.tsx`; the user's rule, 2026-11-14). A new panel goes into one of those parts, or
+  it replaces one on Live.
+- The Memory picture must stay calm (the user's rule, 2026-11-14: it jumped and bounced too much).
+  The first picture and a card of a new size are shown at rest, a change of the dots moves slowly,
+  and a click on a dot zooms the picture to it. The comments in `Memory.tsx` have the numbers.
 - `src/lib/course.ts` samples every 2 s how much the body moves and how loud it is at the band's
   microphone (the band program's `sound`, which is null while the microphone is off), each from 0
   to 1, the heart rate (the Polar's, or else the Muse's), the agent's stage of sleep and the

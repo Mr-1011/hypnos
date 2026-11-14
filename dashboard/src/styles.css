@@ -202,17 +202,33 @@ h1 {
   .app.fit .course {
     min-height: 0;
   }
-  /* the Focus tab has one row: its panel takes all of the screen that is left */
+  /* the Focus tab has one row: the Memory card takes all of the screen that is left */
   .app.fit .grid.focus {
     grid-template-rows: minmax(0, 1fr);
   }
 }
-/* and its line of words is read from further away */
+/* The Focus tab: only the picture and the words (the user's rule, 2026-11-14). The card has no
+   frame and no title, and the words are in the middle, large enough to read from further away. */
+.focus .panel {
+  border: none;
+  background: none;
+}
+.focus .panel > header {
+  display: none;
+}
 .focus .talk {
+  justify-content: center;
   height: 56px;
   padding: 14px 16px;
+  border-top: none;
   font-size: 20px;
   line-height: 28px;
+}
+.focus .memory-said {
+  border-top: none;
+  background: var(--bg);
+  font-size: 16px;
+  text-align: center;
 }
 
 .panel {
