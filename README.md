@@ -89,9 +89,12 @@ latency and sound with Alexis still need a live check. So the band's sound goes 
 text to Google: tell the people near the band first.
 
 The band is made to be worn for weeks and months, and the agent uses that. When something weighs
-on you at night, it answers with an earlier time when the same kind of thing went well: "Four
-weeks ago your presentation went well. Tomorrow can go the same way." It does that in two cases:
-you speak in your sleep, or you say nothing and the body shows stress (see Sleep).
+on you at night, it answers with a helpful behavior from your own earlier words: "You paused
+and explained one number at a time last time." It does that in two cases:
+you speak in your sleep, or you are awake/drowsy before an important upcoming event.
+Unsolicited preparation requires personally stated high stakes and a helpful action in your
+own earlier words; otherwise the agent stays quiet. These are prompt-level rules, not a
+validated prediction of benefit. Movement alone does not identify a worry.
 
 For that the agent works in a loop with tools. It calls the ones it needs, and then it speaks:
 
@@ -110,7 +113,7 @@ The band hears the Mac's speaker, so the agent does not listen while it speaks: 
 interrupt it.
 
 English everyday conversation simulations are in [agent/simulations.md](agent/simulations.md):
-fictional daytime conversations and short bedtime replies for six situations. Use them as
+two fictional demo situations: responding to sleep speech, and preparing for an important event. Use them as
 role-play scripts; they are not loaded into the person's memory or mock calendar/mail.
 The replies are examples, not fixed responses from the live model.
 

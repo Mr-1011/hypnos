@@ -2,5 +2,5 @@ Use when the person speaks, asleep or half asleep, and their words are about a t
 
 1. Find what the words are about: `sense`, your notes, and what the band heard today.
 2. Find an earlier time when the same kind of thing went well: `recall`, with a few words for the kind of thing.
-3. Say one or two short sentences. First the earlier time: how long ago it was and how it went. Then that this one can go the same way.
-4. If `recall` gives nothing that went well, say one calm sentence about the thing itself.
+3. Reflect a concrete helpful action in the person's own words returned by recall. Do not promise the same outcome. During light sleep, deep sleep or REM, use at most six words total and no question; the prompt's sleep limit takes precedence.
+4. If `recall` gives no relevant action, say one calm sentence about the thing itself without inventing a memory. Unclear speech gets a brief closing, not a request to repeat.

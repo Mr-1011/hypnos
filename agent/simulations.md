@@ -1,218 +1,78 @@
-# Everyday conversations — English demo scripts
+# Two Hypnos demo situations
 
 ## Mock data
 
-All people, events and conversations below are fictional. These are role-play scripts,
-not recordings or real account data. They are not automatically loaded into memory.
-Each scene stands alone: the daytime conversation is what Hypnos would have heard;
-the bedtime conversation shows how it can respond using that context.
+These are English role-play scripts, not real sleep recordings or evidence that speaking
+at night improves sleep or next-day performance. The earlier statements are explicitly
+fictional fixtures in `agent/mock/days/`. In real use, only the person's own recorded
+statements may supply the behavior. Never present these demo memories as real history.
 
-Read the daytime roles naturally, including pauses and small corrections. At bedtime,
-leave room for each reply to finish. Hypnos uses Alexis, speed 0.7, expressivity -2.
-The Hypnos lines are illustrative responses; the live model may phrase them differently.
-Bracketed stage directions are not spoken.
+The scripts are a runbook, not an automatic audio simulator. The live model may phrase
+its replies differently. Use Alexis, speed 0.7, expressivity -2. Do not read stage
+directions aloud. The current loop cannot hear the person while Hypnos speaks.
 
-## 1. A presentation tomorrow
+## 1. Reactive — the person speaks while asleep
 
-### During the day — at work
+**Demo context:** The person is worried about an important investor call. The mock memory
+from October 30 says: "On the investor call, I paused before answering and explained one
+number at a time. That helped me stay clear."
 
-**Person:** Do you have a minute to look at the opening slide?
+**Person, softly:** "The numbers... I can't explain them."
 
-**Maya:** Sure. Is this for tomorrow morning?
+**Dashboard:** The person's transcribed words appear as `you`. Hypnos calls `sense` and
+`recall`; the Memory graph highlights the context it looked at.
 
-**Person:** Yeah, ten o'clock. I know the material, but I keep changing the first sentence.
+**Hypnos:** "One number at a time helped."
 
-**Maya:** The example about the small shop works. Start there.
+**Dashboard:** The spoken response appears as `agent`, replacing the person's line in
+the current single-line transcript. Both turns remain in the day's recording.
 
-**Person:** I just don't want to freeze when everyone looks at me.
+**[The person falls quiet; Hypnos does not ask a question.]**
 
-**Maya:** We can do one practice run after lunch.
+**Acceptance:** With a sleeping stage, the reply is at most six words, grounded in the
+retrieved behavior. Without a matching memory, use simple reassurance without an invented
+success. The speech alone does not establish that the person is asleep: for a staged
+presentation, explicitly call it a simulated sleep utterance. The sleep score is heuristic.
 
-**Person:** Okay. Just one, though. Otherwise I'll spend the whole afternoon on it.
+## 2. Preparatory — an important moment is ahead
 
-### At bedtime — awake, then drowsy
+**Demo context:** At bedtime, awake or drowsy, before the November 15 investor call.
+The fictional November 13 statement says: "Sunday's investor call matters a lot to me.
+Funding would let us keep building together, and I want to explain our numbers clearly."
+The mock calendar confirms the upcoming call. October 30 supplies the person's own helpful
+behavior: pausing, then explaining one number at a time.
 
-**[Bedtime cue]**
+**[Bedtime cue; the person has said nothing tonight.]**
 
-**Hypnos:** Tomorrow's opening can wait; you already found a clear place to start.
+**Hypnos:** "You paused and explained one number at a time last time."
 
-**Person:** I'm still going over that first sentence.
+**Hypnos:** "That same pause is available for tomorrow's call."
 
-**Hypnos:** The small shop example is there when you need it.
+**Dashboard:** The retrieved memory is highlighted; the spoken preparation appears as
+`agent`. No words are attributed to the person unless they actually speak.
 
-**Person:** Yeah. I think I'm just tired now.
+**[Hypnos stays quiet afterward; no rehearsal or repeated prompting.]**
 
-**[Drowsy cue]**
+**Acceptance:** All three must be present: an upcoming event, personally stated high stakes,
+and a relevant helpful behavior in the person's own retrieved words. Only awake/drowsy;
+only once per event in this conversation. This is a prompt-level relevance rule, not a
+validated estimate of impact or a deterministic policy engine.
 
-**Hypnos:** Let the slides rest until morning.
+**Negative checks:** An ordinary dentist appointment alone gets silence. A calendar event
+without the person's stated stakes gets silence. High stakes without a relevant earlier
+behavior get silence. Someone else's success does not count. Sleeping or unknown stage
+gets silence for proactive preparation. A repeated cue for the same event gets silence.
 
-## 2. A small disagreement at home
+## Presentation sequence
 
-### During the day — in the kitchen
+1. Explain the fictional history and simulated sleep scene before starting.
+2. Show the relevant memory, then perform the reactive utterance and let Alexis finish.
+3. For the preparatory scene, start a separate conversation with the important-event
+   context available and an awake/drowsy stage. Keep the person silent for the bedtime cue.
+4. Demonstrate a negative check: no important event means Hypnos stays quiet.
 
-**Sam:** I thought you were picking up groceries.
+The bundled event is dated November 15, 2026. After that date, use a clearly labeled new
+fixture for a future event; do not treat an expired appointment as upcoming.
 
-**Person:** I thought you said you'd go after work.
-
-**Sam:** No, I said I could go tomorrow.
-
-**Person:** Right. Sorry, I wasn't really listening this morning.
-
-**Sam:** It's okay. We've got pasta.
-
-**Person:** I snapped at you over nothing.
-
-**Sam:** We've both had a long day. Let's eat first.
-
-### At bedtime
-
-**[Bedtime cue]**
-
-**Hypnos:** That kitchen moment was awkward, and you already offered an apology.
-
-**Person:** I still feel bad about my tone.
-
-**Hypnos:** You wish you'd spoken more gently to Sam.
-
-**Person:** I'll say that tomorrow.
-
-**Hypnos:** That can be a small conversation in the morning.
-
-## 3. Too many little errands
-
-### During the day — a phone call while walking home
-
-**Person:** I've got the parcel, but I forgot the laundry again.
-
-**Friend:** When do they close?
-
-**Person:** Six. I'll never get there now.
-
-**Friend:** Do you need any of it tonight?
-
-**Person:** No. It's mostly towels. It just feels like I'm behind on everything.
-
-**Friend:** Could you pick it up on your lunch break tomorrow?
-
-**Person:** Yeah, it's around the corner from work. That would actually be easier.
-
-### At bedtime — restless
-
-**[Restless cue]**
-
-**Hypnos:** The laundry has a place in tomorrow's lunch break; tonight can stay quiet.
-
-**Person:** There was something else, too. The parcel, maybe.
-
-**Hypnos:** You picked up the parcel on your way home.
-
-**Person:** Oh, right. Good.
-
-**Hypnos:** One less thing to carry tonight.
-
-## 4. Missing a friend
-
-### During the day — coffee with a coworker
-
-**Person:** Nina sent me a photo from her new apartment.
-
-**Coworker:** The friend who moved away?
-
-**Person:** Yeah. We used to get coffee every Sunday without even planning it.
-
-**Coworker:** Have you talked lately?
-
-**Person:** Just messages. She's settling in, so I don't want to bother her.
-
-**Coworker:** You could ask when she's free.
-
-**Person:** I might send a voice note tomorrow. Something small.
-
-### At bedtime
-
-**[Bedtime cue]**
-
-**Hypnos:** You miss those Sundays with Nina; a small voice note can wait until tomorrow.
-
-**Person:** It's strange not having her around.
-
-**Hypnos:** Those easy coffee mornings meant a lot to you.
-
-**Person:** They did. I'm too sleepy to think now.
-
-**Hypnos:** You can let that rest tonight.
-
-## 5. An ordinary good day
-
-### During the day — on the way back from lunch
-
-**Person:** I'm glad we went outside instead of eating at our desks.
-
-**Lee:** Even with that ridiculous wind?
-
-**Person:** Especially that. I needed something to wake me up.
-
-**Lee:** Same time next week?
-
-**Person:** Let's try. And that little bakery was good.
-
-**Lee:** You only had half the cinnamon roll.
-
-**Person:** I saved the rest for later. For once, today doesn't feel rushed.
-
-### At bedtime
-
-**[Bedtime cue]**
-
-**Hypnos:** That unhurried lunch with Lee gave today a little breathing room.
-
-**Person:** It was nice. Nothing big happened.
-
-**Hypnos:** The walk and the bakery were enough.
-
-**[Drowsy cue]**
-
-**Hypnos:** Let that easy afternoon fade gently.
-
-## 6. Someone else's worry, and a sleepy reply
-
-### During the day — waiting for the bus
-
-**Jordan:** My rent is going up next month. I'm worried about it.
-
-**Person:** That's rough. Have you spoken to your landlord?
-
-**Jordan:** Not yet. I'll call tomorrow.
-
-**Person:** I hope you can work something out.
-
-**Jordan:** How's your week looking?
-
-**Person:** Pretty quiet, actually. I'm looking forward to a slow weekend.
-
-### At bedtime — awake, then drifting off
-
-**[Bedtime cue]**
-
-**Hypnos:** That slow weekend you wanted is something gentle to look forward to.
-
-**Person:** I hope Jordan's okay.
-
-**Hypnos:** You care about Jordan, and they plan to call their landlord tomorrow.
-
-**Person:** Mm. The bus... the blue one, I think...
-
-**Hypnos:** You can rest now.
-
-**[Silence; no follow-up question.]**
-
-## What to listen for
-
-- Alexis sounds unhurried and natural at 0.7, without dropping or inventing words.
-- Hypnos uses the day's context instead of asking the person to recount it.
-- Jordan's rent worry stays Jordan's; Hypnos does not attribute it to the person.
-- Replies stay within fifteen words, with fewer words and no questions when drowsy.
-- Unclear sleepy speech gets a gentle closing, not a request to repeat it.
-- The person waits for the voice to finish: the current loop cannot hear interruptions.
-
-These scripts check delivery and conversational behavior, not sleep detection accuracy.
+The demo proves the interaction: heard words, retrieved context, a grounded spoken reply,
+and selective silence. It does not establish prevention or a next-day behavioral benefit.
