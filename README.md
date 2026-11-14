@@ -117,8 +117,12 @@ the Memory card rings what was touched.
 Every half minute the agent program scores the stage of sleep (`agent/sleep.py`): awake, drowsy,
 light, deep or REM, from the Muse's EEG bands and from wrist and head movement, and it counts the
 cycles of the night. With no Muse on the head it has only stillness and the clock, the way a
-wrist tracker scores sleep. The Memory card's header shows the stage. The rules were set by hand
-and no night was held against them: a prototype's estimate, not a sleep lab's.
+wrist tracker scores sleep. The rules were set by hand and no night was held against them: a
+prototype's estimate, not a sleep lab's.
+
+The **Sleep** graph in the Live tab draws the course: the stage on top, and under it the heart
+rate, the movement of wrist and head, and the brain's delta, theta and alpha, all on one clock.
+It begins when the page opens, and a reload of the page starts it again.
 
 While the agent is on, the sensors make it speak without being asked, one sentence each time,
 about what the notes say comes up or weighs on you: when you go to bed, when you fall asleep
