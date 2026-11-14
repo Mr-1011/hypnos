@@ -7,6 +7,8 @@ export const MOTION_HZ = 50 // RATE in sensors/live_band.py
 export interface BandState extends LinkState {
   rec: { on: boolean; dir?: string; label?: string; since?: number }
   firmware: string | null
+  mic: { on: boolean; err: string | null } // err: why it is off although it was asked for
+  lines: [number, string][] // what the microphone heard: [utc ms, the settled line]
 }
 
 export interface BandStats {
@@ -26,6 +28,7 @@ type Msg =
   | ({ t: 'stats' } & BandStats)
   | { t: 'data'; acc: Col[]; gyro: Col[] }
   | { t: 'event'; ts: number; text: string }
+  | { t: 'text'; ts: number; text: string; final: 0 | 1 }
 
 const num = (v: number | null) => (v === null ? NaN : v)
 
@@ -33,6 +36,7 @@ class BandLive {
   state: BandState | null = null
   stats: BandStats | null = null
   statsSeq = 0
+  partial = '' // the guess for the sentence that is being spoken; it may still change
   // the Live tab's 20 s view, plus the playhead's lag behind the newest sample
   readonly acc = [0, 1, 2].map(() => new Ring(MOTION_HZ * 21))
   readonly gyro = [0, 1, 2].map(() => new Ring(MOTION_HZ * 21))
@@ -58,6 +62,11 @@ class BandLive {
         return true
       case 'state':
         this.state = m
+        if (!m.mic.on) this.partial = ''
+        return true
+      case 'text':
+        this.partial = m.final ? '' : m.text
+        if (m.final && this.state) this.state = { ...this.state, lines: [...this.state.lines, [m.ts, m.text] as [number, string]].slice(-50) }
         return true
       case 'event':
         this.state = appendEvent(this.state, m.ts, m.text)

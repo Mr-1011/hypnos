@@ -9,11 +9,13 @@ import { History } from '../components/History'
 import { Spectrogram } from '../components/Spectrogram'
 import { Channels, BAND_COLORS, BAND_NAMES } from '../components/Channels'
 import { Streams } from '../components/Streams'
+import { Transcript } from '../components/Transcript'
 import { Panel, Seg, Tiles, fmt } from '../components/Panel'
 import { AXIS_COLORS, EL_COLORS, HIST_POINTS, PPG_LANES } from './MuseTab'
 
-// Every device at once, three panels a row: the wrist, the brain and the heart on the same
-// seconds, then the slow numbers, then how well the Muse sits and how much of it arrives.
+// Every device at once: what was said, then three panels a row with the wrist, the brain and the
+// heart on the same seconds, then the slow numbers, then how well the Muse sits and how much of
+// it arrives.
 export function LiveTab() {
   const bd = useBand()
   const mu = useMuse()
@@ -53,6 +55,8 @@ export function LiveTab() {
           ]}
         />
       </div>
+
+      <Transcript className="span12" />
 
       <Panel title="Wrist" className="span4" tools={<Seg value={seconds} options={['5', '10', '20']} onChange={setSeconds} labels={{ 5: '5 s', 10: '10 s', 20: '20 s' }} />}>
         {/* a fixed range, so a still wrist is a flat line and not its own noise blown up */}

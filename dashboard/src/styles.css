@@ -959,3 +959,34 @@ button.on {
 .log .none {
   color: var(--text-3);
 }
+
+/* ---------- Transcript ---------- */
+.mic-note {
+  padding: 8px 12px 0;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.mic-note.on {
+  color: var(--warn);
+}
+.mic-note.bad {
+  color: var(--bad);
+}
+/* a fixed height, so the charts below do not move with every sentence */
+.said {
+  height: 118px;
+  font-family: inherit;
+  font-size: 14px;
+}
+.said time {
+  min-width: 60px; /* the guess row has no time: its text lines up with the settled lines */
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 20px;
+}
+.said span {
+  color: var(--text);
+}
+.said .guess span {
+  color: var(--text-3);
+}
