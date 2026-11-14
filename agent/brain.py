@@ -1,6 +1,8 @@
 """brain.py - what Hypnos keeps about the person, as Markdown that a person can read and edit.
 
-    data/brain/days/<date>.md   what was said in that day's talk, both sides, one line each
+    data/brain/days/<date>.md   the day, one line each: what the band's microphone heard while its
+                                switch was on (**heard**: the person and whoever was near), and
+                                both sides of the talk with the agent (**you**, **agent**)
     data/brain/person.md        the notes: what is on the person's mind, what comes up, what helps.
                                 Gemini writes them again after a talk (reflect.md says how) and
                                 the agent reads them at the start of the next one.
@@ -27,12 +29,6 @@ RESTLESS = 20   # that many of them moving: 10 of the 30 s
 # Google's decisions model: one input, many closed questions, calibrated answers and no text.
 # 0.7 s for two questions on 2026-11-14.
 SENSE = "gemini-decision-1"
-STATES = {  # a guess from words and movement, not a sleep stage: nothing here was held against a sleep lab
-    "awake": "speaks in whole sentences, or moves like a person who is up",
-    "drowsy": "lies still; the words come slowly, few or unclear",
-    "asleep": "has been still and silent for minutes",
-    "restless": "lies in bed and moves a lot",
-}
 
 
 def today():
@@ -51,6 +47,11 @@ def note(day, ts, who, text):
 
 def notes():
     f = DIR / "person.md"
+    return f.read_text() if f.exists() else ""
+
+
+def day_text(day):
+    f = DIR / "days" / f"{day}.md"
     return f.read_text() if f.exists() else ""
 
 
@@ -84,17 +85,16 @@ def restless(moves):
 
 
 async def sense(client, said, body):
-    """What the decisions model makes of this moment: the notes that the person's words touch,
-    whether they sound worried, and the state they seem to be in. said: the last lines of the
-    talk. body: the sensors' numbers in words. client: a genai.Client, held by the caller."""
+    """What the decisions model makes of this moment: the notes that the person's words touch, and
+    whether they sound worried. said: the last lines of the talk. body: the stage of sleep and the
+    sensors' numbers, in words. client: a genai.Client, held by the caller."""
     lines = [n for n in graph()["nodes"] if n["kind"] == "line" and not n["id"].startswith("Days/")]
     questions = {f"n{i}": {"type": "noul", "instructions": f"The person's last words are about this: {n['label']}"}
                  for i, n in enumerate(lines)}
     questions["worried"] = {"type": "noul", "instructions": "The person sounds worried or tense."}
-    questions["state"] = {"type": "choice", "instructions": "The state the person is in right now.", "criteria": STATES}
     a = (await client.aio.decisions.create(model=SENSE, input=f"{said}\n\n{body}", questions=questions)).answers
     return {"about": [n["id"] for i, n in enumerate(lines) if a[f"n{i}"].noul > 0.5],
-            "worried": round(a["worried"].noul, 2), "state": a["state"].choice}
+            "worried": round(a["worried"].noul, 2)}
 
 
 async def reflect(client, model, day):
@@ -102,7 +102,7 @@ async def reflect(client, model, day):
     old = notes()
     r = await client.aio.models.generate_content(
         model=model, config={"system_instruction": (HERE / "reflect.md").read_text()},
-        contents=f"<notes>\n{old}</notes>\n\n<talk>\n{(DIR / 'days' / f'{day}.md').read_text()}</talk>")
+        contents=f"<notes>\n{old}</notes>\n\n<day>\n{day_text(day)}</day>")
     if r.text:
         if old:
             (DIR / "person.before.md").write_text(old)  # a bad rewrite must not cost what a person wrote by hand

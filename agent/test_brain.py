@@ -49,11 +49,10 @@ class Brain(unittest.TestCase):
 
         async def create(model, input, questions):  # the decisions model: sure of the pitch, not of the walk
             asked.update(questions)
-            return NS(answers={k: NS(choice="drowsy") if k == "state" else NS(noul=0.9 if "pitch" in q["instructions"] else 0.1)
-                               for k, q in questions.items()})
+            return NS(answers={k: NS(noul=0.9 if "pitch" in q["instructions"] else 0.1) for k, q in questions.items()})
 
         with tempfile.TemporaryDirectory() as d, mock.patch.object(brain, "DIR", Path(d)):
             (Path(d) / "person.md").write_text("## Coming up\n- The pitch, 2026-11-15\n\n## What helps\n- The walk\n\n## Days\n- 2026-11-14: long\n")
             got = asyncio.run(brain.sense(NS(aio=NS(decisions=NS(create=create))), "person: I am not ready.", "Sensors: none."))
-        self.assertEqual(len(asked), 4)  # two notes, worried, state: the Days lines are not asked about
-        self.assertEqual(got, {"about": ["Coming up/The pitch, 2026-11-15"], "worried": 0.1, "state": "drowsy"})
+        self.assertEqual(len(asked), 3)  # two notes and worried: the Days lines are not asked about
+        self.assertEqual(got, {"about": ["Coming up/The pitch, 2026-11-15"], "worried": 0.1})

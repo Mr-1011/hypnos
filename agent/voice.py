@@ -9,18 +9,26 @@ One Pipecat pipeline, in its own process so that nothing here can hold up a reco
       -> Deepgram Aura      text to speech
       -> this Mac's sound output (the band has no speaker): the speakers, or AirPods on the Mac
 
-brain.py is its memory: every line of the talk goes into the day's Markdown file, the agent starts
-with the notes about the person, and when a talk ends Gemini writes those notes again.
+The agent does not ask the person about their day: it knows it. For as long as this program runs it
+reads the three sensor programs' streams (sensors()), also while the loop is off:
 
-While the loop runs it also reads the movement numbers of the band and of the Muse (their
-/api/stream, "stats"). A body that does not rest (brain.restless) gets one calm sentence, with
-nobody asking: the cue goes to Gemini like a line of the talk, and the notes say what to speak to.
+    what the band heard   every settled line of the band program's Microphone switch goes into the
+                          day's Markdown file (brain.py). The agent starts a talk with the notes
+                          about the person and with that day; when a talk ends, Gemini writes the
+                          notes again.
+    the stage of sleep    every half minute sleep.py scores awake, drowsy, light, deep or rem from
+                          the Muse's EEG bands and from wrist and head movement, and counts cycles.
+
+While the loop runs, the sensors also give cues: the agent says one sentence, with nobody asking,
+when the person falls asleep (awake to drowsy) and when the body does not rest (brain.restless).
+A cue goes to Gemini like a line of the talk, and the notes say what to speak to.
 
     ./run.sh                 starts it with the three sensor programs
 
 API on 127.0.0.1:5304 (the page reaches it as /api/agent):
     GET  /api/stream   server-sent events: state, text ({who: "you" | "agent", text, final}).
-                       The state carries the brain as nodes and links (brain.graph), for the page.
+                       The state carries the brain as nodes and links (brain.graph), what the
+                       decisions model made of the last moment (sense) and the stage of sleep.
     GET  /api/state
     POST /api/talk     {"on": true} | {"on": false}; the answer has ok and, when refused, err
 
@@ -32,8 +40,9 @@ keep it, and keep mip_opt_out on both Deepgram services.
 The keys come from the environment or from .env in the repo root: DEEPGRAM_API_KEY, GOOGLE_API_KEY.
 
 Tried 2026-11-14 with the pretend band's voice (a fable read aloud): Flux gave the words while they
-were spoken and closed the turn at the reader's pause; Aura played on the Mac's speakers. Gemini
-was not reached that day: the key's project had no credit (402).
+were spoken and closed the turn at the reader's pause; Aura played on the Mac's speakers; Gemini
+spoke first into a quiet room and wrote the notes. The reader never waits for an answer, so every
+answer was interrupted: a person's sentence and the agent's answer to it were not seen that day.
 """
 import argparse
 import asyncio
@@ -73,6 +82,7 @@ from pipecat.transports.local.audio import LocalAudioTransport, LocalAudioTransp
 from vexo_open.audio import PcmDecoder  # noqa: E402
 
 import brain  # noqa: E402
+import sleep  # noqa: E402
 from live_server import LiveServer  # noqa: E402
 
 RATE = 16000                  # the band's microphone: 16 kHz, mono, 20 ms a packet
@@ -80,7 +90,6 @@ MODEL = "gemini-4-hydrogen"   # the fast one of the three the key reaches (liste
 VOICE = "aura-2-pandora-en"   # Deepgram calls it smooth, calm, melodic, breathy
 ECHO_S = 0.6                  # the room still holds the agent's voice this long after it stops
 CALM_GAP_S = 120              # no calm words sooner than this after the agent last spoke; a guess, no night behind it
-CUE = "(cue) The person moves a lot and does not rest."
 KEYS = ("DEEPGRAM_API_KEY", "GOOGLE_API_KEY")
 NOTE = ("Note: while the agent runs, everything the band's microphone hears is sent over the internet to "
         "Deepgram (deepgram.com), and what is said goes as text to Google and back to Deepgram for the "
@@ -171,11 +180,13 @@ class Sense(FrameProcessor):
 class Voice(LiveServer):
     name = "Agent"
 
-    def __init__(self, band_url, movers):
+    def __init__(self, band_url, streams):
         super().__init__()
         self.band_url = band_url
-        self.movers = movers  # where on the body -> the event stream of the program that measures there
+        self.streams_of = streams  # where on the body -> the event stream of the program that measures there
         self.seen = {}        # where on the body -> (its last movement numbers, its last heart rate)
+        self.eeg = []         # this epoch's EEG: the Muse's band shares, one entry for each of its stats
+        self.night = sleep.Night()
         self.sensed = None    # brain.sense's last answer, for the page
         self.spoke = 0.0      # time.time() of the agent's last words
         self.worker = None   # the running pipeline; not None = the agent is on
@@ -183,12 +194,11 @@ class Voice(LiveServer):
         self.err = None      # what went wrong in the loop, in the service's own words
         self.lines = collections.deque(maxlen=50)  # [utc_ms, "you" | "agent", what was said]
         self.day = None      # the date this talk is filed under
-        self.heard = False   # the person said something in this talk: there is something to write notes from
         self.google = None   # Google's client for this talk: the decisions model, and the notes at its end
 
     def state(self):
         return {"t": "state", "on": bool(self.worker), "err": self.err, "lines": list(self.lines), "brain": brain.graph(),
-                "sense": self.sensed}
+                "sense": self.sensed, "sleep": self.night.now()}
 
     def said(self, who, text, final=True):
         ts = int(time.time() * 1000)
@@ -197,10 +207,19 @@ class Voice(LiveServer):
                 return
             self.lines.append([ts, who, text])
             brain.note(self.day, ts, who, text)
-            self.heard = self.heard or who == "you"
             if who == "agent":
                 self.spoke = time.time()
         self.broadcast({"t": "text", "ts": ts, "who": who, "text": text, "final": int(final)})
+
+    def asleep(self):
+        """The stage of sleep in words, for Gemini and for the decisions model."""
+        n = self.night.now()
+        if n["stage"] is None:
+            return "The sensors give no stage of sleep yet."
+        if not n["cycle"]:
+            return f"By the sensors the person is {n['stage']} and has not slept yet."
+        return (f"By the sensors the person is {'awake again' if n['stage'] == 'awake' else 'in ' + n['stage'] + ' sleep'}: "
+                f"cycle {n['cycle']}, {n['asleep_min']} minutes after sleep began.")
 
     async def talk(self, on):
         """Start or end the loop. A refusal comes back as a sentence for the person at the page."""
@@ -215,12 +234,13 @@ class Voice(LiveServer):
         if missing:
             return f"The agent needs {' and '.join(missing)} in .env (env.example has the form)."
         print(NOTE, flush=True)  # before any sound is sent
-        self.day, self.heard, self.sensed = brain.today(), False, None
+        self.day, self.sensed, self.night = brain.today(), None, sleep.Night()  # the talk begins at bedtime: a new night
         self.google = genai.Client(api_key=keys["GOOGLE_API_KEY"], http_options={"api_version": "v1beta"})  # v1beta: the decisions model
         self.spoke = time.time()
-        about = brain.notes()
-        system = (HERE / "prompt.md").read_text() + time.strftime("\nToday is %A, %Y-%m-%d.\n") + (
-            f"\n# Your notes about this person\n\n{about}" if about else "")
+        # shortcut: a long day is cut to its last 12000 characters, about an hour of speech; have Gemini
+        # write the notes through the day when days get longer than that.
+        system = (HERE / "prompt.md").read_text() + time.strftime("\nToday is %A, %Y-%m-%d. It is %H:%M.\n") + (
+            f"\n# Your notes about this person\n\n{brain.notes()}\n# What the band heard today\n\n{brain.day_text(self.day)[-12000:]}")
         stt = DeepgramFluxSTTService(api_key=keys["DEEPGRAM_API_KEY"], mip_opt_out=True)
         # thinking: measured 2026-11-14 with this prompt. Google's default thinks 7 to 10 s before the first
         # word, "low" 2 to 3 s; "minimal" is refused for this model, and a budget of 0 is no faster than low.
@@ -229,7 +249,7 @@ class Voice(LiveServer):
         tts = DeepgramTTSService(api_key=keys["DEEPGRAM_API_KEY"], mip_opt_out=True,
                                  settings=DeepgramTTSService.Settings(voice=VOICE))
         # the agent speaks first: this line is its cue, the person never said it
-        you, agent = LLMContextAggregatorPair(LLMContext([{"role": "user", "content": "The person has just gone to bed. Begin."}]))
+        you, agent = LLMContextAggregatorPair(LLMContext([{"role": "user", "content": "(cue) The person has just gone to bed."}]))
 
         @you.event_handler("on_user_turn_stopped")
         async def person_finished(aggregator, strategy, message):
@@ -258,7 +278,7 @@ class Voice(LiveServer):
 
     async def sense(self, talk):
         """Ask the decisions model about this moment. The answer goes to the page, and comes back as the line for Gemini."""
-        body = []
+        body = [self.asleep()]
         for where, (moves, bpm) in self.seen.items():
             got = [m for m in moves if m is not None]
             if got:
@@ -266,15 +286,22 @@ class Voice(LiveServer):
                             f"mean {sum(got) / len(got):.0f}, most {max(got):.0f}")
             if bpm:
                 body.append(f"heart rate at the {where}: {bpm:.0f} a minute")
-        self.sensed = await brain.sense(self.google, talk, time.strftime("It is %H:%M. Sensors: ") + ("; ".join(body) or "none") + ".")
+        self.sensed = await brain.sense(self.google, talk, time.strftime("It is %H:%M. ") + "; ".join(body) + ".")
         self.push_state()
         labels = {n["id"]: n["label"] for n in brain.graph()["nodes"]}
         touched = "; ".join(labels[i] for i in self.sensed["about"])
-        return ("(notes) " + (f"Their last words touch: {touched}. " if touched else "") + f"They seem {self.sensed['state']}"
-                + (" and worried." if self.sensed["worried"] > 0.6 else "."))
+        return ("(notes) " + (f"Their last words touch: {touched}. " if touched else "")
+                + ("They sound worried. " if self.sensed["worried"] > 0.6 else "") + self.asleep())
+
+    async def cue(self, what):
+        """The sensors make the agent speak: one line into the talk, as if it had been said."""
+        self.spoke = time.time()
+        brain.note(self.day, int(time.time() * 1000), "sensors", what)
+        await self.worker.queue_frames([LLMMessagesAppendFrame([{"role": "user", "content": f"(cue) {what}"}], run_llm=True)])
 
     async def watch(self, where, url):
-        """One program's movement numbers. A body that does not rest gets calm words, unasked."""
+        """One sensor program's stream: its movement numbers and heart rate, the Muse's EEG bands, and
+        what the band's microphone heard. A body that does not rest gets calm words, unasked."""
         moves = collections.deque(maxlen=brain.WINDOW)
         while True:
             try:
@@ -282,37 +309,61 @@ class Voice(LiveServer):
                 async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=None), read_bufsize=2 ** 20) as http, \
                         http.get(url) as r:
                     async for line in r.content:
-                        if b'"stats"' not in line:
+                        if line.startswith(b'data: {"t":"text"'):
+                            m = json.loads(line[6:])
+                            if m["final"]:  # the band program's own transcript: its Microphone switch is on
+                                brain.note(brain.today(), m["ts"], "heard", m["text"])
+                        if not line.startswith(b'data: {"t":"stats"'):
                             continue
                         m = json.loads(line[6:])
                         moves.append(m["move"] if "move" in m else (m.get("motion") or {}).get("move"))  # band | Muse
                         self.seen[where] = (moves, m["bpm"] if "bpm" in m else (m.get("hr") or {}).get("bpm"))  # Polar | Muse
-                        if brain.restless(moves) and time.time() - self.spoke > CALM_GAP_S:
-                            self.spoke = time.time()
+                        if "bands" in m:  # the Muse: the mean over the electrodes that sit well
+                            good = [b for b, e in zip(m["bands"], m["eeg"]) if b and e and e["q"] < 3]
+                            self.eeg.append([sum(c) / len(good) for c in zip(*good)] if good else None)
+                        if self.worker and brain.restless(moves) and time.time() - self.spoke > CALM_GAP_S:
                             moves.clear()
-                            brain.note(self.day, int(time.time() * 1000), "sensors", "The person moved a lot.")
-                            await self.worker.queue_frames([LLMMessagesAppendFrame([{"role": "user", "content": CUE}], run_llm=True)])
+                            await self.cue("The person moves a lot and does not rest.")
             except aiohttp.ClientError:
                 pass
             await asyncio.sleep(1)  # that program is not up, or it restarts
 
+    async def epochs(self):
+        """Every half minute: the stage of sleep, from that half minute of every sensor."""
+        while True:
+            await asyncio.sleep(sleep.EPOCH_S)
+            eeg, self.eeg = [b for b in self.eeg if b], []
+            moves = [m for ms, _ in self.seen.values() for m in list(ms)[-2 * sleep.EPOCH_S:] if m is not None]
+            if not eeg and not moves:
+                continue  # no sensor is linked: no verdict
+            was = self.night.now()["stage"]
+            now = self.night.add([sum(c) / len(eeg) for c in zip(*eeg)] if len(eeg) > sleep.EPOCH_S else None,  # EEG for more than half of it
+                                 sum(m > brain.MOVING_MG for m in moves) / len(moves) if moves else 0)
+            self.push_state()
+            if self.worker and (was, now) == ("awake", "drowsy") and time.time() - self.spoke > CALM_GAP_S:
+                await self.cue("The person is falling asleep now.")
+
+    async def sensors(self):
+        """For as long as the program runs: every sensor program's stream, and the stage of sleep."""
+        async with asyncio.TaskGroup() as all_of_them:
+            for where, url in self.streams_of.items():
+                all_of_them.create_task(self.watch(where, url))
+            all_of_them.create_task(self.epochs())
+
     async def run_loop(self):
-        watchers = [asyncio.create_task(self.watch(where, url)) for where, url in self.movers.items()]
         try:
             runner = PipelineRunner(handle_sigint=False)
             await runner.add_workers(self.worker)
             await runner.run()
         except Exception as e:  # a pipeline that dies must leave the switch off and say why
             self.err = str(e) or type(e).__name__
-        for w in watchers:
-            w.cancel()
         self.worker = None
         self.push_state()
-        if self.heard:
+        if brain.day_text(self.day):
             try:
                 await brain.reflect(self.google, MODEL, self.day)
                 self.push_state()  # the page draws the new notes
-            except Exception as e:  # no credit, no internet: the talk is in the day's file, the notes stay as they were
+            except Exception as e:  # no credit, no internet: the day is in its file, the notes stay as they were
                 self.err = f"The notes were not written: {str(e)[:200] or type(e).__name__}"
                 self.push_state()
 
@@ -341,8 +392,9 @@ def main():
     args = ap.parse_args()
     logger.remove()
     logger.add(sys.stderr, level="INFO")  # Pipecat's default prints every frame
-    Voice(args.band + "/api/audio", {"wrist": args.band + "/api/stream", "head": args.muse + "/api/stream",
-                                     "chest": args.polar + "/api/stream"}).run(args.port)
+    voice = Voice(args.band + "/api/audio", {"wrist": args.band + "/api/stream", "head": args.muse + "/api/stream",
+                                             "chest": args.polar + "/api/stream"})
+    voice.run(args.port, [voice.sensors])
 
 
 if __name__ == "__main__":
