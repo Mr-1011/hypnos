@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { DeviceCard } from './components/DeviceCard'
 import { type Tone } from './components/Panel'
-import { agent } from './lib/agent'
+import { agent, useAgent } from './lib/agent'
 import { band, bandApi, useBand } from './lib/band'
 import { course } from './lib/course'
 import { muse, museApi, useMuse } from './lib/muse'
 import { polar, polarApi, usePolar } from './lib/polar'
+import { post } from './lib/sse'
 import { BandTab } from './tabs/BandTab'
 import { MuseTab } from './tabs/MuseTab'
 import { LiveTab } from './tabs/LiveTab'
@@ -84,6 +85,19 @@ function Cards() {
   )
 }
 
+// The demo: while it is on, the agent listens through the band's microphone and answers
+// (agent/voice.py, POST /api/talk). While it is off, nothing reacts to what a person says.
+function Demo() {
+  const ag = useAgent()
+  const on = !!ag.state?.on
+  return (
+    <label className="demo">
+      Demo
+      <button role="switch" aria-checked={on} aria-label="Demo" className={`switch ${on ? 'on' : ''}`} onClick={() => post('/api/agent', '/api/talk', { on: !on })} disabled={!ag.online} />
+    </label>
+  )
+}
+
 export default function App() {
   const [tab, setTab] = useState<Tab>(savedTab)
   useEffect(() => {
@@ -117,6 +131,7 @@ export default function App() {
             </button>
           ))}
         </nav>
+        <Demo />
       </header>
       <Cards />
       {tab === 'Live' ? <LiveTab /> : null}

@@ -30,6 +30,16 @@ class Gap(unittest.TestCase):
         self.assertEqual(b.pend["acc"][4], (0.0, 0.0, 1.0))
 
 
+class Loud(unittest.TestCase):
+    def test_the_microphones_level_is_in_the_stats(self):
+        b = BandLink("sim")
+        self.assertIsNone(b.stats()["sound"])  # the microphone is off: no level
+        for seq, opus in enumerate(b.voice["audio_packets"][:50]):  # 1 s of the kit's reader
+            b.on_audio(Message(opus=opus, seq=seq))
+        self.assertTrue(-50 < b.stats()["sound"] < -5)  # a voice: well over silence, under full scale
+        self.assertIsNone(b.stats()["sound"])  # and no packet since
+
+
 class Sim(unittest.IsolatedAsyncioTestCase):
     async def test_links_streams_and_records(self):
         with tempfile.TemporaryDirectory() as d, mock.patch.object(live_band.subprocess, "Popen"), \

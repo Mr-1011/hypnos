@@ -1,9 +1,10 @@
 import type { Sample, Stage } from './course'
 
 // A night that never happened, for the demo: the hours of the Sleep State graph before the page
-// opened. Two cycles of sleep as a sleep lab scores them, a body that lies still, and two moments:
-// after the first REM the person wakes, moves and says a few words; later they turn over and say
-// nothing. It is made up: never present it as measured.
+// opened. Two cycles of sleep as a sleep lab scores them, a body that lies still, a heart that
+// slows with the depth of sleep, and two moments: after the first REM the person wakes, moves and
+// says a few words; later they turn over and say nothing. The heart jumps at both, more at the
+// first. It is made up: never present it as measured.
 
 // minutes since the night began -> the stage from there on
 const STAGES: [number, Stage][] = [
@@ -21,6 +22,9 @@ const EEG: Record<Stage, [number, number, number][]> = {
   rem: [[4, 7, 0.2], [15, 24, 0.14], [1, 3, -0.08]], // fast again, with no slow waves
 }
 
+// beats a minute at rest in each stage: slowest in deep sleep, and up again in REM
+const HEART: Record<Stage, number> = { awake: 66, drowsy: 61, light: 56, deep: 52, rem: 59 }
+
 // 1 at `at` minutes, 0 from `len` minutes before and after it
 const peak = (min: number, at: number, len: number) => Math.max(0, 1 - Math.abs(min - at) / len)
 
@@ -29,6 +33,9 @@ export function simNight(from: number, n: number, stepMs: number, bins: number):
   const out: Sample[] = []
   const eeg = new Float32Array(bins) // the stage's own rhythm; it comes over some minutes, as in a brain
   const drift = new Float32Array(bins) // each frequency also comes and goes by itself, over a minute or two
+  let rest = HEART.awake // the heart follows the stage over some minutes
+  let wander = 0 // and goes its own way by a beat or two
+  let kick = 0 // a moment sends it up in seconds, and it comes down over minutes
   for (let i = 0; i < n; i++) {
     const min = (i * stepMs) / 60_000
     const stage = STAGES.filter(([at]) => at <= min).pop()![1]
@@ -36,6 +43,11 @@ export function simNight(from: number, n: number, stepMs: number, bins: number):
     const turned = 0.5 * peak(min, 171.6, 0.5) + 0.35 * peak(min, 172.3, 0.3) // the second
     const move =
       0.03 + 0.03 * Math.random() + (Math.random() < 0.001 ? 0.12 : 0) + 0.3 * peak(min, 0, 5) + (woke + turned) * (0.7 + 0.6 * Math.random())
+    const said = Math.max(peak(min, 97.3, 0.7), 0.8 * peak(min, 98.3, 0.6)) // a few sentences, and the agent's answer
+    const jump = 16 * Math.min(1, woke / 0.6) + 9 * Math.min(1, turned / 0.5)
+    rest += (HEART[stage] - rest) * 0.01
+    wander = wander * 0.995 + 0.5 * (Math.random() - 0.5)
+    kick += (jump - kick) * (jump > kick ? 0.3 : 0.02)
     const spec = new Uint8ClampedArray(bins)
     for (let k = 0; k < bins; k++) {
       const want = EEG[stage].reduce((v, [a, b, add]) => (k + 1 >= a && k + 1 <= b ? v + add : v), 0)
@@ -54,7 +66,9 @@ export function simNight(from: number, n: number, stepMs: number, bins: number):
     out.push({
       t: from + i * stepMs,
       move: Math.min(1, move),
-      talk: 0.45 * peak(min, 97.3, 0.7) + 0.35 * peak(min, 98.3, 0.6), // a few sentences, and the agent's answer
+      // a quiet room, the covers at the start and at each move, and speech, which has pauses
+      sound: Math.min(1, 0.05 + 0.03 * Math.random() + 0.15 * peak(min, 0, 4) * Math.random() + 0.2 * (woke + turned) + said * (0.35 + 0.4 * Math.random())),
+      heart: Math.round(rest + wander + kick + 0.8 * (Math.random() - 0.5)),
       stage,
       spec,
     })

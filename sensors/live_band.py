@@ -16,6 +16,8 @@ API on 127.0.0.1:5303 (the page reaches it as /api/band):
                            text (what the microphone hears: guesses with final 0, then the settled line)
     GET  /api/audio        server-sent events for the agent program: the microphone's Opus packets,
                            {"seq", "opus" (base64)}. The microphone is on while someone listens here.
+                           While it is on, the stats carry `sound`: its level in dB under full scale
+                           (2026-11-14: the hackathon's hall read -35 to -25, the kit's reader -25 to -17).
     GET  /api/state
     POST /api/autoconnect  look for the band until it answers (double-tap it: it can be found for 60 s)
     POST /api/disconnect   and stop looking
@@ -128,6 +130,8 @@ class BandLink(BleLink):
         self.streams["/api/audio"] = self.listeners
         self.mic_live = False        # what the band was last told
         self.sound = None            # the band's packets on their way to feed()
+        self.decoder = None          # the microphone's packets as samples, only to say how loud it is
+        self.loud = [0, 0]           # the sum of the squared samples since the last stats, and their number
         self.mic_err = None          # why the microphone went off by itself (Deepgram hung up)
         self.lines = collections.deque(maxlen=50)  # [utc_ms, what was said], settled lines only
         self.firmware = None
@@ -302,6 +306,13 @@ class BandLink(BleLink):
         if self.ears:
             self.sound.put(a)
         self.broadcast({"seq": a.seq, "opus": base64.b64encode(a.opus).decode()}, self.listeners)
+        # How loud it is, for the page's Sound lane. The samples stay here: only their level goes out.
+        # On the event loop, as the motion is: measured 2026-11-14 at 79 us a packet, 4 ms for each
+        # second of sound.
+        self.decoder = self.decoder or audio.PcmDecoder()
+        pcm = memoryview(self.decoder.feed(a.opus, a.seq)).cast("h")
+        self.loud[0] += sum(v * v for v in pcm)
+        self.loud[1] += len(pcm)
 
     def heard(self, text, final):
         ts = int(time.time() * 1000)
@@ -351,7 +362,10 @@ class BandLink(BleLink):
         self.rate.append((now, self.got))
         (t0, n0), (t1, n1) = self.rate[0], self.rate[-1]
         live = self.link == "streaming" and now - self.motion_at < 3  # an older number says nothing about now
+        (squares, n), self.loud = self.loud, [0, 0]
         return {"t": "stats",
+                # the microphone's level since the last stats, in dB under full scale; None while it is off
+                "sound": round(10 * math.log10(squares / n / 32768 ** 2 + 1e-10), 1) if n else None,
                 # the spread of |a| over the last 2 s in mg, the number live_muse.py calls motion.move
                 "move": round(statistics.pstdev(self.mag) * 1000, 1) if live and len(self.mag) >= RATE else None,
                 "hz": round((n1 - n0) / (t1 - t0), 1) if t1 > t0 else 0,

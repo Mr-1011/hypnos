@@ -17,7 +17,7 @@ agent answers aloud).
 cd sensors && ../.venv/bin/python -m unittest test_live_band                                    # all tests
 cd sensors && ../.venv/bin/python -m unittest test_live_band.Gap.test_lost_samples_become_nan   # one test
 
-cd agent && ../.venv/bin/python -m unittest test_brain test_sleep test_voice                    # the agent's tests
+cd agent && ../.venv/bin/python -m unittest test_brain test_sleep                               # the agent's tests
 
 cd dashboard && npx tsc --noEmit    # type check; strict, with noUnusedLocals and noUnusedParameters
 ```
@@ -110,11 +110,11 @@ written.
 
 `voice.py` is one Pipecat pipeline in its own process, so that nothing in it can hold up a
 recording: the band's sound (`BandInput`, from `/api/audio`) to Deepgram Flux (speech to text and
-the end of a turn), Gemini (`prompt.md` is the system instruction), Deepgram Flux TTS (Alexis,
-speed 0.7, expressivity -2) and
-the Mac's sound output. It is a `LiveServer` and holds no Bluetooth link. The page has no switch
-for the loop (the user's rule, 2026-11-14): it starts when the band is linked and ends when the
-band is switched off on its card (`watch()`), and `POST /api/talk` does the same by hand. The
+the end of a turn), Gemini (`prompt.md` is the system instruction), Deepgram Flux TTS (Alexis, speed 0.7, expressivity -2) and
+the Mac's sound output. It is a `LiveServer` and holds no Bluetooth link. The Demo switch in
+the page's top bar starts and ends the loop (`POST /api/talk`; the user's rule, 2026-11-14, which
+replaced the start by the band's link). While it is off, nothing listens on `/api/audio`, so the
+band's microphone is off and nothing answers what a person says. The
 keys are read from `.env` at each start. Its docstring is the reference.
 
 - The sound goes to Deepgram and the text to Google: keep `NOTE`, printed before any sound is
@@ -166,8 +166,7 @@ keys are read from `.env` at each start. Its docstring is the reference.
   (`brain.restless()` in `watch()`). A cue carries the body's numbers (`felt()`).
   The numbers (`MOVING_MG`, `WINDOW`, `RESTLESS`, `CALM_GAP_S`) are set for the awake demo: see
   the `shortcut:` comment in `brain.py`.
-- `test_voice.py` covers only the rule that starts and ends the loop. Try the rest of `voice.py`
-  with `sensors/live_band.py --sim` on a spare port and `--band`
+- `voice.py` has no test. Try it with `sensors/live_band.py --sim` on a spare port and `--band`
   set to it. The pretend band always reads as restless (28 mg). The tools have no test: they were
   tried as text, with a made-up past in a scratch brain folder.
 
@@ -187,11 +186,14 @@ keys are read from `.env` at each start. Its docstring is the reference.
 - The Live tab is one screen with no page scroll (`.app.fit` in `styles.css`): the Sleep State graph
   beside the Memory card, whose lower part is the transcript, and three traces under them. Only
   that first row changes its height. A new panel goes on a device tab, or it replaces one on Live.
-- `src/lib/course.ts` samples every 2 s how much the body moves and how much is said, each from 0
-  to 1, the agent's stage of sleep and the Muse's spectrum, for the Sleep State graph
-  (`components/Course.tsx`: a night of 8 h zoomed out, a pinch zooms, a click follows now; the
-  stage colours and the spectrogram's ramp are Patch's). The page holds that history: a reload
-  starts the graph again (see the `shortcut:` comment there).
+- `src/lib/course.ts` samples every 2 s how much the body moves and how loud it is at the band's
+  microphone (the band program's `sound`, which is null while the microphone is off), each from 0
+  to 1, the heart rate (the Polar's, or else the Muse's), the agent's stage of sleep and the
+  Muse's spectrum, for the Sleep State graph (`components/Course.tsx`: a night of 8 h zoomed out,
+  a pinch zooms, a click follows now; the stage colours and the spectrogram's ramp are Patch's).
+  Each line has its own lane, and the hours to come are empty tracks (the user's rules,
+  2026-11-14): do not put two lines into one lane. The page holds that history: a reload starts
+  the graph again (see the `shortcut:` comment there).
 - The first `SIM_H` hours of that graph are mock data too: `src/lib/sim.ts` makes up a night that
   began at 00:00, and `course.shift` moves the graph's clock to it. Set `SIM_H` to 0 for a real
   night, and never present the made-up hours as measured. `SPEC_DB`, the range of the

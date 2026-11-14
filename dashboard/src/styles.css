@@ -76,6 +76,16 @@ select:focus-visible {
   background: var(--bg);
   border-bottom: 1px solid var(--line);
 }
+/* the Demo switch, at the right end of the top bar */
+.demo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+}
 .brand {
   display: flex;
   align-items: center;
