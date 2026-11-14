@@ -4,8 +4,8 @@ import { Panel } from './Panel'
 
 const W = 720
 const H = 280
-const COLOR: Record<BrainNode['kind'], string> = { person: '#f3f4f6', head: '#e0b64d', line: '#c47ad9', day: '#4c9be8' }
-const NAME: Record<BrainNode['kind'], string> = { person: 'the person', head: 'a part of the notes', line: 'a note', day: 'a day' }
+const COLOR: Record<BrainNode['kind'], string> = { person: '#f3f4f6', head: '#e0b64d', line: '#c47ad9', day: '#4c9be8', source: '#19d18d', item: '#5fbf9f' }
+const NAME: Record<BrainNode['kind'], string> = { person: 'the person', head: 'a part of the notes', line: 'a note', day: 'a day', source: 'connected', item: 'from a connected source' }
 
 type P = { x: number; y: number; vx: number; vy: number }
 
@@ -109,10 +109,12 @@ export function Memory({ className = '' }: { className?: string }) {
             const q = pos.current.get(n.id)!
             const r = n.kind === 'person' ? 7 : 3 + 1.4 * Math.sqrt(near.get(n.id)?.size ?? 0)
             // a note's own words are long: the dot shows their start, the line below the picture shows all
-            const whole = n.kind !== 'line' || !!sense?.about.includes(n.id)
-            const label = n.id === hot && !whole ? '' : whole || n.label.length <= 22 ? n.label : `${n.label.slice(0, 20)}...`
+            const whole = (n.kind !== 'line' && n.kind !== 'item') || !!sense?.about.includes(n.id)
+            // an item begins with its date: the link to the day shows that, so the dot shows the words
+            const words = n.kind === 'item' ? n.label.replace(/^[\d: -]+/, '') : n.label
+            const label = n.id === hot && !whole ? '' : whole || words.length <= 22 ? words : `${words.slice(0, 20)}...`
             return (
-              <g key={n.id} className={`${n.kind} ${lit(n.id) ? '' : 'dim'}`} onMouseEnter={() => setHot(n.id)} onMouseLeave={() => setHot(null)}>
+              <g key={n.id} className={`${n.kind === 'source' ? 'head' : n.kind} ${lit(n.id) ? '' : 'dim'}`} onMouseEnter={() => setHot(n.id)} onMouseLeave={() => setHot(null)}>
                 <circle cx={q.x} cy={q.y} r={r + 6} fill="transparent" />
                 {/* what the person's last words touch, says the decisions model */}
                 {sense?.about.includes(n.id) ? <circle className="touched" cx={q.x} cy={q.y} r={r + 5} stroke={COLOR[n.kind]} /> : null}

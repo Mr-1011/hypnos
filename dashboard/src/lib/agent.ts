@@ -8,7 +8,9 @@ export type Who = 'you' | 'agent'
 export interface BrainNode {
   id: string
   label: string
-  kind: 'person' | 'head' | 'line' | 'day'
+  // head and line: a heading of the notes and a note. source and item: what the agent is connected
+  // to (calendar, mail) and an entry of it
+  kind: 'person' | 'head' | 'line' | 'day' | 'source' | 'item'
 }
 
 export interface AgentState {
