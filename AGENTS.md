@@ -148,9 +148,10 @@ keys are read from `.env` at each start. Its docstring is the reference.
   them after `prompt.md`.
 - What the agent is for (the user's rule, 2026-11-14): it answers what weighs on the person with
   an earlier time when the same kind of thing went well, in one or two sentences. Two cases: the
-  person speaks in their sleep, and preparation while awake/drowsy for an important upcoming event.
+  person speaks in their sleep, and sensor-triggered support for an important upcoming event, including during sleep.
   Preparation requires the person's stated high stakes and a concrete helpful behavior from their
   own retrieved words; otherwise use `stay_quiet`. Movement alone does not identify a worry.
+  Sleep replies have at most six words; unknown stage means stay quiet. Bedtime alone is not a trigger.
   These are prompt-level relevance rules, not a validated estimate of impact. It must name
   only an earlier time that `recall` gave it: keep that line in `prompt.md`.
 - `sleep.py` scores the stage of sleep each half minute (`epochs()`), from the Muse's band shares

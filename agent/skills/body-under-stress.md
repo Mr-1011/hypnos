@@ -1,6 +1,6 @@
-Use when a cue says that the body does not rest or that something disturbs the sleep, and the person says nothing.
+Use when a cue says that the body does not rest or that something disturbs sleep, and the person says nothing.
 
-1. Movement alone does not tell you that the person is stressed or what they are thinking.
-2. During sleep, or when the stage is unknown, use `stay_quiet` for an unsolicited cue.
-3. While awake or drowsy, apply the preparation skill's full importance and evidence checks. Do not guess the likeliest worry from their calendar.
-4. If those checks fail, or you already prepared for that event in this conversation, use `stay_quiet`.
+1. Movement/arousal alone does not identify stress, a worry or a dream.
+2. Apply the important-event skill's full context checks, including a known sleep stage. Sleep is allowed for the approved silent Leah scene; an unknown stage means `stay_quiet`.
+3. During sleep, say at most six affirmative words and ask nothing. Do not invent a person utterance.
+4. Without a personally important upcoming event and a relevant earlier helpful behavior, or after already addressing that event in this conversation, use `stay_quiet`.

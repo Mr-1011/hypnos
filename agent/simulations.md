@@ -1,78 +1,104 @@
-# Two Hypnos demo situations
+# David and Leah — the two approved Hypnos demo stories
 
 ## Mock data
 
-These are English role-play scripts, not real sleep recordings or evidence that speaking
-at night improves sleep or next-day performance. The earlier statements are explicitly
-fictional fixtures in `agent/mock/days/`. In real use, only the person's own recorded
-statements may supply the behavior. Never present these demo memories as real history.
+Fictional English scripts approved for the demo. These are not real recordings, measured
+sleep responses, or evidence of prevention. Show the daytime context before the night
+scene. Label the sleep scenes as simulated. Use Alexis, speed 0.7, expressivity -2.
 
-The scripts are a runbook, not an automatic audio simulator. The live model may phrase
-its replies differently. Use Alexis, speed 0.7, expressivity -2. Do not read stage
-directions aloud. The current loop cannot hear the person while Hypnos speaks.
+This document is a storyboard, not an automatic simulator. It does not load either person's
+history into the live agent. David and Leah are separate people: never combine their
+memories into the same live brain. The existing agent/mock files are a different demo
+history and do not establish either person's context below. A live-model run needs the
+matching isolated person, day and event context first; exact replies are illustrative.
 
-## 1. Reactive — the person speaks while asleep
+## 1. David — reactive reassurance
 
-**Demo context:** The person is worried about an important investor call. The mock memory
-from October 30 says: "On the investor call, I paused before answering and explained one
-number at a time. That helped me stay clear."
+### Daytime: David speaks to a friend
 
-**Person, softly:** "The numbers... I can't explain them."
+**David:** "They've worked on this for a year. I'm scared I'll let them down."
 
-**Dashboard:** The person's transcribed words appear as `you`. Hypnos calls `sense` and
-`recall`; the Memory graph highlights the context it looked at.
+**Known upcoming event:** Tomorrow's investor pitch, personally important to David.
 
-**Hypnos:** "One number at a time helped."
+### Earlier experience: David's own words
 
-**Dashboard:** The spoken response appears as `agent`, replacing the person's line in
-the current single-line transcript. Both turns remain in the day's recording.
+**David:** "Maya and I took turns presenting. Having her beside me helped me feel steady."
 
-**[The person falls quiet; Hypnos does not ask a question.]**
+### Current confirmation: David's own words
 
-**Acceptance:** With a sleeping stage, the reply is at most six words, grounded in the
-retrieved behavior. Without a matching memory, use simple reassurance without an invented
-success. The speech alone does not establish that the person is asleep: for a staged
-presentation, explicitly call it a simulated sleep utterance. The sleep score is heuristic.
+**David:** "Maya's presenting with me again tomorrow."
 
-## 2. Preparatory — an important moment is ahead
+Both pieces of evidence must be visible in the story: sharing the presentation helped,
+and Maya is actually participating tomorrow. A past mention of Maya alone is insufficient.
 
-**Demo context:** At bedtime, awake or drowsy, before the November 15 investor call.
-The fictional November 13 statement says: "Sunday's investor call matters a lot to me.
-Funding would let us keep building together, and I want to explain our numbers clearly."
-The mock calendar confirms the upcoming call. October 30 supplies the person's own helpful
-behavior: pausing, then explaining one number at a time.
+### Night: simulated sleep speech
 
-**[Bedtime cue; the person has said nothing tonight.]**
+**David, softly and hesitantly:** "No… I can't…"
 
-**Hypnos:** "You paused and explained one number at a time last time."
+**Dashboard:** The transcribed words appear as `you`. Hypnos looks at the known context
+and earlier memory; the Memory graph can highlight retrieved evidence.
 
-**Hypnos:** "That same pause is available for tomorrow's call."
+**Hypnos:** "You and Maya are a team."
 
-**Dashboard:** The retrieved memory is highlighted; the spoken preparation appears as
-`agent`. No words are attributed to the person unless they actually speak.
+**[Silence. No follow-up question.]**
 
-**[Hypnos stays quiet afterward; no rehearsal or repeated prompting.]**
+The current dashboard shows one transcript line: Hypnos's response replaces David's line;
+both settled turns remain in the day's recording. A fragment such as "No" does not prove
+that David is dreaming about the pitch. This is contextual reassurance, not dream reading.
 
-**Acceptance:** All three must be present: an upcoming event, personally stated high stakes,
-and a relevant helpful behavior in the person's own retrieved words. Only awake/drowsy;
-only once per event in this conversation. This is a prompt-level relevance rule, not a
-validated estimate of impact or a deterministic policy engine.
+**Checks:** Without current confirmation that Maya participates, do not use this reply.
+Without attributable context, do not infer a specific worry from "No" or "I can't".
+During sleep, use at most six words and no question. Do not demand a response.
 
-**Negative checks:** An ordinary dentist appointment alone gets silence. A calendar event
-without the person's stated stakes gets silence. High stakes without a relevant earlier
-behavior get silence. Someone else's success does not count. Sleeping or unknown stage
-gets silence for proactive preparation. A repeated cue for the same event gets silence.
+## 2. Leah — sensor-triggered support while asleep, without speech
 
-## Presentation sequence
+### Daytime: Leah speaks to her sister
 
-1. Explain the fictional history and simulated sleep scene before starting.
-2. Show the relevant memory, then perform the reactive utterance and let Alexis finish.
-3. For the preparatory scene, start a separate conversation with the important-event
-   context available and an awake/drowsy stage. Keep the person silent for the bedtime cue.
-4. Demonstrate a negative check: no important event means Hypnos stays quiet.
+**Leah:** "This job would let me move closer to you. I keep trying to prepare every possible answer."
 
-The bundled event is dated November 15, 2026. After that date, use a clearly labeled new
-fixture for a future event; do not treat an expired appointment as upcoming.
+**Known upcoming event:** Tomorrow's important job interview. Being closer to her sister
+is Leah's stated reason that this matters.
 
-The demo proves the interaction: heard words, retrieved context, a grounded spoken reply,
-and selective silence. It does not establish prevention or a next-day behavioral benefit.
+### Earlier experience: Leah's own words
+
+**Leah:** "For my last interview, I picked one project I knew well. Talking through it helped me settle."
+
+### Current plan: Leah's own words
+
+**Leah:** "Tomorrow, I'll start with the community project."
+
+### Night: simulated arousal, Leah says nothing
+
+**[Leah is asleep. The dashboard's arousal trace rises.]**
+
+A sensor cue prompts Hypnos to check the already known context: important upcoming event,
+personally stated significance, and a relevant helpful behavior in Leah's own words.
+Arousal does not identify a worry or prove that Leah is thinking about her interview.
+
+**Hypnos:** "One familiar story to start."
+
+**[Silence. No rehearsal, question or repeated prompting.]**
+
+**Dashboard:** Only Hypnos's sentence appears as `agent`. Never insert a `you` utterance
+for Leah. The retrieved memory supplies the reason for the response, not a supposed
+interpretation of the sensor trace. Do not stage an immediate arousal drop as proof of benefit.
+
+**Checks:** No important upcoming event, no personally stated significance, no matching
+helpful memory, or unknown sleep stage means stay quiet. A second cue for the same event
+in the same conversation also means stay quiet. An ordinary calendar entry is insufficient.
+
+## Implementation and presentation boundaries
+
+The approved second story replaces the earlier awake/drowsy bedtime-preparation version.
+The prompt and agent skills allow one short sleep response to a restlessness/arousal cue
+when all context checks pass. Bedtime alone does not trigger this second scene.
+
+The existing backend emits movement/restlessness and sleep-to-awake cues; it does not
+consume the dashboard's arousal curve as a trigger. The dashboard is a view, and its
+made-up history is not sensor evidence. Driving a reproducible simulated cue and switching
+between isolated David/Leah contexts is separate work from this storyboard update.
+
+For a one-minute video, show David's spoken trigger and Leah's silent sensor trigger.
+Keep each evidence card readable, show the response, then leave silence. This demonstrates
+context retrieval and selective response, not validated psychological benefit. Sleep stages
+are heuristic. The relevance and once-per-event checks are currently prompt-level rules.

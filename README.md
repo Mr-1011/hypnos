@@ -91,7 +91,8 @@ text to Google: tell the people near the band first.
 The band is made to be worn for weeks and months, and the agent uses that. When something weighs
 on you at night, it answers with a helpful behavior from your own earlier words: "You paused
 and explained one number at a time last time." It does that in two cases:
-you speak in your sleep, or you are awake/drowsy before an important upcoming event.
+you speak in your sleep, or a restlessness cue prompts a brief reminder of a helpful behavior
+for an important upcoming event, including during sleep.
 Unsolicited preparation requires personally stated high stakes and a helpful action in your
 own earlier words; otherwise the agent stays quiet. These are prompt-level rules, not a
 validated prediction of benefit. Movement alone does not identify a worry.
@@ -113,8 +114,10 @@ The band hears the Mac's speaker, so the agent does not listen while it speaks: 
 interrupt it.
 
 English everyday conversation simulations are in [agent/simulations.md](agent/simulations.md):
-two fictional demo situations: responding to sleep speech, and preparing for an important event. Use them as
+the approved David (sleep speech) and Leah (silent, sensor-triggered) stories. Use them as
 role-play scripts; they are not loaded into the person's memory or mock calendar/mail.
+The dashboard arousal curve itself does not trigger the agent; existing backend restlessness
+cues do. Automatic playback and isolated character contexts are not implemented by these scripts.
 The replies are examples, not fixed responses from the live model.
 
 ### The brain
