@@ -9,6 +9,9 @@ One Pipecat pipeline, in its own process so that nothing here can hold up a reco
       -> Deepgram Aura      text to speech
       -> this Mac's sound output (the band has no speaker): the speakers, or AirPods on the Mac
 
+brain.py is its memory: every line of the talk goes into the day's Markdown file, the agent starts
+with the notes about the person, and when a talk ends Gemini writes those notes again.
+
     ./run.sh                 starts it with the three sensor programs
 
 API on 127.0.0.1:5304 (the page reaches it as /api/agent):
@@ -62,6 +65,7 @@ from pipecat.transports.base_transport import TransportParams  # noqa: E402
 from pipecat.transports.local.audio import LocalAudioTransport, LocalAudioTransportParams  # noqa: E402
 from vexo_open.audio import PcmDecoder  # noqa: E402
 
+import brain  # noqa: E402
 from live_server import LiveServer  # noqa: E402
 
 RATE = 16000                  # the band's microphone: 16 kHz, mono, 20 ms a packet
@@ -148,6 +152,9 @@ class Voice(LiveServer):
         self.loop = None     # the task that runs it
         self.err = None      # what went wrong in the loop, in the service's own words
         self.lines = collections.deque(maxlen=50)  # [utc_ms, "you" | "agent", what was said]
+        self.day = None      # the date this talk is filed under
+        self.heard = False   # the person said something in this talk: there is something to write notes from
+        self.google = None   # the key the talk started with, for the notes at its end
 
     def state(self):
         return {"t": "state", "on": bool(self.worker), "err": self.err, "lines": list(self.lines)}
@@ -158,6 +165,8 @@ class Voice(LiveServer):
             if not text:
                 return
             self.lines.append([ts, who, text])
+            brain.note(self.day, ts, who, text)
+            self.heard = self.heard or who == "you"
         self.broadcast({"t": "text", "ts": ts, "who": who, "text": text, "final": int(final)})
 
     async def talk(self, on):
@@ -173,9 +182,13 @@ class Voice(LiveServer):
         if missing:
             return f"The agent needs {' and '.join(missing)} in .env (env.example has the form)."
         print(NOTE, flush=True)  # before any sound is sent
+        self.day, self.heard, self.google = brain.today(), False, keys["GOOGLE_API_KEY"]
+        about = brain.notes()
+        system = (HERE / "prompt.md").read_text() + time.strftime("\nToday is %A, %Y-%m-%d.\n") + (
+            f"\n# Your notes about this person\n\n{about}" if about else "")
         stt = DeepgramFluxSTTService(api_key=keys["DEEPGRAM_API_KEY"], mip_opt_out=True)
         llm = GoogleLLMService(api_key=keys["GOOGLE_API_KEY"], settings=GoogleLLMService.Settings(
-            model=MODEL, system_instruction=(HERE / "prompt.md").read_text()))
+            model=MODEL, system_instruction=system))
         tts = DeepgramTTSService(api_key=keys["DEEPGRAM_API_KEY"], mip_opt_out=True,
                                  settings=DeepgramTTSService.Settings(voice=VOICE))
         # the agent speaks first: this line is its cue, the person never said it
@@ -215,6 +228,12 @@ class Voice(LiveServer):
             self.err = str(e) or type(e).__name__
         self.worker = None
         self.push_state()
+        if self.heard:
+            try:
+                await brain.reflect(self.google, MODEL, self.day)
+            except Exception as e:  # no credit, no internet: the talk is in the day's file, the notes stay as they were
+                self.err = f"The notes were not written: {str(e)[:200] or type(e).__name__}"
+                self.push_state()
 
     async def route(self, method, path, body):
         try:
