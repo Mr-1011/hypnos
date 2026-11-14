@@ -50,10 +50,11 @@ function draw(cv: HTMLCanvasElement, s: number, w: number) {
   const x = (t: number) => PAD + ((t - s) / w) * (W - 2 * PAD)
   const y = (v: number) => bottom - 4 - v * (bottom - 4 - TOP)
 
-  // calm at the bottom, awake at the top: three lines across, and the clock under them
+  // calm at the bottom, awake at the top: a line at the bottom and one half way, and the clock under
+  // them. The top has none: 12 px under the panel's title line it read as a double line.
   ctx.lineWidth = 1
   ctx.strokeStyle = 'rgba(255,255,255,0.06)'
-  for (const g of [0, 0.5, 1]) {
+  for (const g of [0, 0.5]) {
     const yy = Math.round(y(g)) + 0.5
     ctx.beginPath()
     ctx.moveTo(0, yy)
