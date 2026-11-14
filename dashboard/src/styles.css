@@ -181,7 +181,7 @@ h1 {
 }
 
 /* ---------- the Live tab: one screen ---------- */
-/* The header, the cards, the tab row, the numbers and the traces keep their height. The Transcript
+/* The top bar, the cards and the traces keep their height. The Transcript
    and Memory row takes what is left, and the Memory picture shrinks to fit it. A narrow or low
    window gets the ordinary scrolling page: there the row would be too low to read. */
 @media (min-width: 1101px) and (min-height: 740px) {
@@ -194,7 +194,7 @@ h1 {
   .app.fit .grid {
     flex: 1;
     min-height: 0;
-    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-rows: minmax(0, 1fr) auto;
   }
   .app.fit .grid > .panel {
     min-height: 0;
