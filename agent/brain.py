@@ -62,6 +62,16 @@ def sources():
     return {f.stem: f.read_text() for f in sorted((HERE / "mock").glob("*.md"))}
 
 
+def recall(words, before):
+    """What the earlier days hold about a thing: their lines with one of the words in them, as
+    [(day, line)], the newest day first. before: the day of the talk, which is not an earlier day.
+    shortcut: it finds words, not meaning, and reads every day's file; give the days an index that
+    finds meaning when the band has been worn for more than a few months."""
+    words = [w.lower() for w in words]
+    return [(f.stem, line[2:]) for f in sorted((DIR / "days").glob("*.md"), reverse=True) if f.stem < before
+            for line in f.read_text().splitlines() if line.startswith("- ") and any(w in line.lower() for w in words)][:30]
+
+
 def graph():
     """The brain as nodes and links, for the page: the person, the headings of the notes and their
     lines, the connected sources and their items, and the days. A line or an item that names a

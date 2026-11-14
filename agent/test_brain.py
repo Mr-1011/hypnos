@@ -48,6 +48,15 @@ class Brain(unittest.TestCase):
             self.assertIn(["person", "2026-11-14"], g["links"])
             self.assertNotIn(["person", "2026-11-15"], g["links"])
 
+    def test_recall_finds_the_words_in_the_earlier_days_newest_first(self):
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(brain, "DIR", Path(d)):
+            brain.note("2026-10-17", 0, "heard", "The Presentation went really well.")
+            brain.note("2026-10-17", 0, "heard", "Lunch was late.")
+            brain.note("2026-11-02", 0, "you", "A good pitch today.")
+            brain.note("2026-11-14", 0, "you", "The presentation is tomorrow.")  # the day of the talk
+            self.assertEqual([(day, line.split("**: ")[1]) for day, line in brain.recall(["presentation", "pitch"], "2026-11-14")],
+                             [("2026-11-02", "A good pitch today."), ("2026-10-17", "The Presentation went really well.")])
+
     def test_sense_asks_about_every_note_and_names_the_ones_touched(self):
         asked = {}
 
