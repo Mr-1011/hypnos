@@ -222,8 +222,10 @@ class Voice(LiveServer):
         system = (HERE / "prompt.md").read_text() + time.strftime("\nToday is %A, %Y-%m-%d.\n") + (
             f"\n# Your notes about this person\n\n{about}" if about else "")
         stt = DeepgramFluxSTTService(api_key=keys["DEEPGRAM_API_KEY"], mip_opt_out=True)
+        # thinking: measured 2026-11-14 with this prompt. Google's default thinks 7 to 10 s before the first
+        # word, "low" 2 to 3 s; "minimal" is refused for this model, and a budget of 0 is no faster than low.
         llm = GoogleLLMService(api_key=keys["GOOGLE_API_KEY"], settings=GoogleLLMService.Settings(
-            model=MODEL, system_instruction=system))
+            model=MODEL, system_instruction=system, thinking=GoogleLLMService.ThinkingConfig(thinking_level="low")))
         tts = DeepgramTTSService(api_key=keys["DEEPGRAM_API_KEY"], mip_opt_out=True,
                                  settings=DeepgramTTSService.Settings(voice=VOICE))
         # the agent speaks first: this line is its cue, the person never said it
