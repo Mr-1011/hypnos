@@ -122,7 +122,8 @@ function draw(cv: HTMLCanvasElement, s: number, w: number) {
   ctx.clip()
 
   // The stage of sleep as on Patch's night chart: a tint behind the lines, a ribbon along the top
-  // and the name. The stage of now has its name at the head.
+  // and the name where it fits. The stage of now is the colour at the head: it has no label of its
+  // own (the user's rule, 2026-11-14).
   ctx.font = '10px system-ui, -apple-system, sans-serif'
   ctx.textAlign = 'center'
   for (let i = a; i <= b; ) {
@@ -138,7 +139,7 @@ function draw(cv: HTMLCanvasElement, s: number, w: number) {
       ctx.globalAlpha = 1
       ctx.fillRect(x0, TOP, x1 - x0, RIBBON)
       const from = Math.max(x0, 0)
-      if (j <= n && Math.min(x1, W) - from > ctx.measureText(STAGE[stage][1]).width + 8) {
+      if (Math.min(x1, W) - from > ctx.measureText(STAGE[stage][1]).width + 8) {
         ctx.fillStyle = 'rgba(255,255,255,0.62)'
         ctx.fillText(STAGE[stage][1], (from + Math.min(x1, W)) / 2, TOP + RIBBON + 13)
       }
@@ -195,8 +196,7 @@ function draw(cv: HTMLCanvasElement, s: number, w: number) {
   }
 
   if (n < 0) return
-  // now: a line down the graph, a dot where each line is (between the two samples around the head),
-  // and the stage with its colour as a box
+  // now: a line down the graph, and a dot where each line is (between the two samples around the head)
   ctx.strokeStyle = 'rgba(255,255,255,0.22)'
   ctx.beginPath()
   ctx.moveTo(Math.round(nowX) + 0.5, TOP)
@@ -212,16 +212,6 @@ function draw(cv: HTMLCanvasElement, s: number, w: number) {
     ctx.beginPath()
     ctx.arc(nowX, y(vp + (vq - vp) * (q === p ? 0 : (now - p.t) / (q.t - p.t))), 3, 0, 2 * Math.PI)
     ctx.fill()
-  }
-  if (p.stage) {
-    const [color, name] = STAGE[p.stage]
-    ctx.font = '600 11px system-ui, -apple-system, sans-serif'
-    const wide = 12 + ctx.measureText(name).width
-    const lx = nowX + 8 + wide > W - 4 ? nowX - 8 - wide : nowX + 8 // left of the line when the right has no room
-    ctx.fillStyle = color
-    ctx.fillRect(lx, TOP + RIBBON + 5, 8, 8)
-    ctx.fillStyle = 'rgba(255,255,255,0.85)'
-    ctx.fillText(name, lx + 12, TOP + RIBBON + 13)
   }
 }
 
