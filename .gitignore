@@ -1,0 +1,25 @@
+# Keys (Deepgram, OpenAI, ElevenLabs): never commit
+.env
+.env.*
+
+# The Vexo kit: a reference clone, not part of this repo (README says how to get it)
+vexo-open-kit/
+
+# Recordings and the remembered Bluetooth devices
+data/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Node / the page
+node_modules/
+dist/
+*.tsbuildinfo
+
+# OS
+.DS_Store
+
+# Local Claude Code settings
+.claude/settings.local.json
