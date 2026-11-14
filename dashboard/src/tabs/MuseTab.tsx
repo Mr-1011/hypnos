@@ -57,7 +57,7 @@ export function MuseTab() {
   const loss = losses.length ? Math.max(...losses) : null
 
   return (
-    <main className="grid">
+    <div className="grid">
       <div className="span12">
         <Tiles
           items={[
@@ -165,6 +165,6 @@ export function MuseTab() {
         <Traces lanes={accLanes} rate={IMU_HZ} seconds={10} scale="auto" unit="g" laneHeight={44} digits={2} />
         <Traces lanes={gyroLanes} rate={IMU_HZ} seconds={10} scale="auto" unit="°/s" laneHeight={44} digits={0} />
       </Panel>
-    </main>
+    </div>
   )
 }

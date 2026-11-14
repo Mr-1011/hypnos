@@ -11,23 +11,19 @@ import { PolarTab } from './PolarTab'
 type Prog = 'band' | 'muse' | 'polar'
 const NAME: Record<Prog, string> = { band: 'Band', muse: 'Muse', polar: 'Polar' }
 
-const VIEWS = ['Programs', 'Band', 'Muse', 'Polar'] as const
-
-// Everything that is about one device and not about the person (the user's rule, 2026-11-14): the
-// programs' health, and each device's own numbers and slow charts. One view at a time, so only its
-// canvases draw.
+// Everything that is about one device and not about the person, as one long page with no tabs in
+// it (the user's rule, 2026-11-14): the programs' health, then each device's own numbers and charts.
 export function DebugTab() {
-  const [view, setView] = useState<(typeof VIEWS)[number]>('Programs')
   return (
-    <>
-      <div className="views">
-        <Seg value={view} options={[...VIEWS]} onChange={setView} />
-      </div>
-      {view === 'Programs' ? <Programs /> : null}
-      {view === 'Band' ? <BandTab /> : null}
-      {view === 'Muse' ? <MuseTab /> : null}
-      {view === 'Polar' ? <PolarTab /> : null}
-    </>
+    <main>
+      <Programs />
+      <h2 className="part">Band</h2>
+      <BandTab />
+      <h2 className="part">Muse</h2>
+      <MuseTab />
+      <h2 className="part">Polar</h2>
+      <PolarTab />
+    </main>
   )
 }
 
@@ -96,7 +92,7 @@ function Programs() {
   }
 
   return (
-    <main className="grid">
+    <div className="grid">
       <Panel
         title="Programs"
         className="span12"
@@ -153,6 +149,6 @@ function Programs() {
           {events.length ? null : <div className="none">No events</div>}
         </div>
       </Panel>
-    </main>
+    </div>
   )
 }

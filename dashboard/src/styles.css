@@ -258,9 +258,11 @@ h2 {
 .seg {
   display: inline-flex;
 }
-/* the Debug tab's views, over its panels */
-.views {
-  margin-top: 12px;
+/* the Debug tab's parts: the name of a device over its panels */
+.part {
+  margin-top: 28px;
+  font-size: 13px;
+  color: var(--text);
 }
 .seg button {
   height: 24px;

@@ -18,7 +18,7 @@ export function BandTab() {
   const moveSeries = useMemo(() => [{ label: 'wrist', color: '#4c9be8' }], [])
 
   return (
-    <main className="grid">
+    <div className="grid">
       <div className="span12">
         <Tiles
           items={[
@@ -51,6 +51,6 @@ export function BandTab() {
       <Panel title="Movement" className="span12">
         <History series={moveSeries} values={s ? [s.move] : null} seq={bd.statsSeq} points={HIST_POINTS} unit="mg" digits={0} height={180} />
       </Panel>
-    </main>
+    </div>
   )
 }

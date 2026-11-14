@@ -16,7 +16,7 @@ export function PolarTab() {
   const hrSeries = useMemo(() => [{ label: 'bpm', color: '#f0637e' }], [])
 
   return (
-    <main className="grid">
+    <div className="grid">
       <div className="span12">
         <Tiles
           items={[
@@ -40,6 +40,6 @@ export function PolarTab() {
       <Panel title="R-R" className="span6">
         <Strip series={[{ label: 'R-R ms', color: '#e0b64d', ring: polar.rr }]} rate={1} seconds={120} span="120 beats" height={180} zero={false} />
       </Panel>
-    </main>
+    </div>
   )
 }
