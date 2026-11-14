@@ -4,6 +4,7 @@ import { DeviceCard } from './components/DeviceCard'
 import { type Tone } from './components/Panel'
 import { agent } from './lib/agent'
 import { band, bandApi, useBand } from './lib/band'
+import { course } from './lib/course'
 import { muse, museApi, useMuse } from './lib/muse'
 import { polar, polarApi, usePolar } from './lib/polar'
 import { BandTab } from './tabs/BandTab'
@@ -91,6 +92,7 @@ export default function App() {
     muse.start()
     polar.start()
     agent.start()
+    course.start()
   }, [])
   useEffect(() => {
     try {

@@ -1,9 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useAgent, type BrainNode } from '../lib/agent'
 import { Panel } from './Panel'
 
-const W = 720
-const H = 280
 const COLOR: Record<BrainNode['kind'], string> = { person: '#f3f4f6', head: '#e0b64d', line: '#c47ad9', day: '#4c9be8', source: '#19d18d', item: '#5fbf9f' }
 const NAME: Record<BrainNode['kind'], string> = { person: 'the person', head: 'a part of the notes', line: 'a note', day: 'a day', source: 'connected', item: 'from a connected source' }
 
@@ -11,15 +9,21 @@ type P = { x: number; y: number; vx: number; vy: number }
 
 // What the agent keeps about the person (agent/brain.py), drawn the way a notes app draws its
 // graph: every note and every day is a dot, and a line joins what belongs together. The dots push
-// each other apart and the links pull, until the picture rests.
-export function Memory({ className = '' }: { className?: string }) {
+// each other apart and the links pull, until the picture rests. children: the lower part of the
+// card, the transcript on the Live tab.
+export function Memory({ className = '', children }: { className?: string; children?: ReactNode }) {
   const ag = useAgent()
   const brain = ag.state?.brain
   const sense = ag.state?.sense
-  const sl = ag.state?.sleep
-  // agent/sleep.py: scored each half minute. With no Muse on the head it is only stillness and the clock.
-  const asleep = !sl?.stage ? '' : `${sl.cycle && sl.stage !== 'awake' ? `${sl.stage} sleep` : sl.stage}${sl.cycle ? `, cycle ${sl.cycle}, ${sl.asleep_min} min` : ''}${sl.eeg ? '' : ' (no EEG)'}`
   const pos = useRef(new Map<string, P>())
+  // the picture is laid out in the card's own pixels, so the words keep their size in a card of any height
+  const svg = useRef<SVGSVGElement>(null)
+  const [{ W, H }, setSize] = useState({ W: 720, H: 280 })
+  useEffect(() => {
+    const ro = new ResizeObserver(([e]) => setSize({ W: Math.round(e.contentRect.width) || 720, H: Math.round(e.contentRect.height) || 280 }))
+    ro.observe(svg.current!)
+    return () => ro.disconnect()
+  }, [])
   const [, setFrame] = useState(0)
   const [hot, setHot] = useState<string | null>(null)
 
@@ -81,7 +85,7 @@ export function Memory({ className = '' }: { className?: string }) {
     }
     raf = requestAnimationFrame(step)
     return () => cancelAnimationFrame(raf)
-  }, [brain, near])
+  }, [brain, near, W, H])
 
   const nodes = (brain?.nodes ?? []).filter((n) => pos.current.has(n.id))
   const lit = (id: string) => !hot || id === hot || !!near.get(hot)?.has(id)
@@ -91,15 +95,10 @@ export function Memory({ className = '' }: { className?: string }) {
     <Panel
       title="Memory"
       className={className}
-      tools={
-        <span className="hr">
-          {asleep}
-          {sense && sense.worried > 0.6 ? `${asleep ? ' - ' : ''}sounds worried` : ''}
-        </span>
-      }
+      tools={<span className="hr">{sense && sense.worried > 0.6 ? 'sounds worried' : ''}</span>}
     >
       <div className="memory">
-        <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="What the agent remembers about the person, as a graph of notes and days">
+        <svg ref={svg} viewBox={`0 0 ${W} ${H}`} role="img" aria-label="What the agent remembers about the person, as a graph of notes and days">
           {(brain?.links ?? []).map(([a, b]) => {
             const A = pos.current.get(a)
             const B = pos.current.get(b)
@@ -140,6 +139,7 @@ export function Memory({ className = '' }: { className?: string }) {
           )}
         </p>
       </div>
+      {children}
     </Panel>
   )
 }

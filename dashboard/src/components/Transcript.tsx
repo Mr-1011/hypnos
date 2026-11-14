@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { agentApi, useAgent, type Who } from '../lib/agent'
 import { bandApi, useBand } from '../lib/band'
-import { Panel } from './Panel'
 
-// What the band's microphone hears, as text, and what the agent answers. Either switch sends the
+// What the band's microphone hears, as text, and what the agent answers: the lower part of the
+// Memory card, so the words and the notes they touch are seen together. Either switch sends the
 // sound to Deepgram, so the line that says so stays on the page the whole time one is on.
-export function Transcript({ className = '' }: { className?: string }) {
+export function Transcript() {
   const bd = useBand()
   const ag = useAgent()
   const [busy, setBusy] = useState(false)
@@ -36,27 +36,24 @@ export function Transcript({ className = '' }: { className?: string }) {
   }
 
   return (
-    <Panel
-      title="Transcript"
-      className={className}
-      tools={
-        <>
+    <section className="talk" aria-label="Transcript">
+      <div className="talk-head">
+        <p className={`mic-note ${on || talking ? 'on' : ''}`}>
+          {talking
+            ? "The agent is on, and so is the band's microphone. Everything it hears goes over the internet to Deepgram (deepgram.com), and what is said goes as text to Google. Tell the people near the band."
+            : on
+              ? "The band's microphone is on. Everything it hears goes over the internet to Deepgram (deepgram.com). The text is kept on this Mac as the agent's memory of the day, and goes to Google when the agent talks. Tell the people near the band."
+              : `The microphone is off.${linked ? '' : ' Link the band to switch it on.'} When it is on, everything it hears goes over the internet to Deepgram, a company. The text is kept as the agent's memory of the day and goes to Google when the agent talks: tell the people near the band first.`}
+        </p>
+        <div className="tools">
           {/* off always works; on needs the band, or nothing would be heard. One listener at a time:
               both at once would send the sound to Deepgram twice and show every sentence twice. */}
           <span className="hr">Agent</span>
           <button role="switch" aria-checked={talking} aria-label="Agent" className={`switch ${talking ? 'on' : ''}`} onClick={() => flip(agentApi('talk', { on: !talking }))} disabled={!ag.online || busy || (!talking && (!linked || on))} />
           <span className="hr">Microphone</span>
           <button role="switch" aria-checked={on} aria-label="Microphone" className={`switch ${on ? 'on' : ''}`} onClick={() => flip(bandApi('mic', { on: !on }))} disabled={!bd.online || busy || (!on && (!linked || talking))} />
-        </>
-      }
-    >
-      <p className={`mic-note ${on || talking ? 'on' : ''}`}>
-        {talking
-          ? "The agent is on, and so is the band's microphone. Everything it hears goes over the internet to Deepgram (deepgram.com), and what is said goes as text to Google. Tell the people near the band."
-          : on
-            ? "The band's microphone is on. Everything it hears goes over the internet to Deepgram (deepgram.com). The text is kept on this Mac as the agent's memory of the day, and goes to Google when the agent talks. Tell the people near the band."
-            : `The microphone is off.${linked ? '' : ' Link the band to switch it on.'} When it is on, everything it hears goes over the internet to Deepgram, a company. The text is kept as the agent's memory of the day and goes to Google when the agent talks: tell the people near the band first.`}
-      </p>
+        </div>
+      </div>
       {err ? <p className="mic-note bad">{err}</p> : null}
       <div className="log said" ref={box}>
         {lines.map(([ts, who, text], i) => (
@@ -75,6 +72,6 @@ export function Transcript({ className = '' }: { className?: string }) {
         ) : null}
         {lines.length || partial ? null : <div className="none">{on || talking ? 'Listening' : 'Nothing said yet'}</div>}
       </div>
-    </Panel>
+    </section>
   )
 }

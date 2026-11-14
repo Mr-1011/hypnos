@@ -3,6 +3,7 @@ import { MOTION_HZ, band } from '../lib/band'
 import { EEG_HZ, EEG_NAMES, muse } from '../lib/muse'
 import { ECG_HZ, polar } from '../lib/polar'
 import { Traces, type Lane } from '../components/Traces'
+import { Course, SleepNow } from '../components/Course'
 import { Transcript } from '../components/Transcript'
 import { Memory } from '../components/Memory'
 import { Panel, Seg } from '../components/Panel'
@@ -10,9 +11,9 @@ import { AXIS_COLORS, EL_COLORS } from './MuseTab'
 
 const TRACE = 180 // px, the height of each of the three trace panels; 5 EEG lanes need 36 each for their two lines of text
 
-// Every device at once, on one screen (styles.css, "the Live tab"): what was said and what the
-// agent remembers, then the wrist, the brain and the heart on the same seconds. The numbers, the
-// slow charts and the health of each device are on its own tab.
+// Every device at once, on one screen (styles.css, "the Live tab"): the course of sleep beside what
+// the agent remembers and what was said, then the wrist, the brain and the heart on the same
+// seconds. The numbers, the slow charts and the health of each device are on its own tab.
 export function LiveTab() {
   const [seconds, setSeconds] = useState<'5' | '10' | '20'>('10')
 
@@ -30,8 +31,12 @@ export function LiveTab() {
 
   return (
     <main className="grid">
-      <Transcript className="span6" />
-      <Memory className="span6" />
+      <Panel title="Sleep" className="span6" tools={<SleepNow />}>
+        <Course />
+      </Panel>
+      <Memory className="span6">
+        <Transcript />
+      </Memory>
 
       <Panel title="Wrist" className="span4" tools={<Seg value={seconds} options={['5', '10', '20']} onChange={setSeconds} labels={{ 5: '5 s', 10: '10 s', 20: '20 s' }} />}>
         {/* a fixed range, so a still wrist is a flat line and not its own noise blown up */}
