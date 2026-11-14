@@ -122,7 +122,7 @@ class BandLink(BleLink):
         self.band = None
         self.ears = None             # the Deepgram connection; not None = the microphone is switched on
         self.sound = None            # the band's packets on their way to feed()
-        self.mic_err = None          # why the microphone is off although it was asked for
+        self.mic_err = None          # why the microphone went off by itself (Deepgram hung up)
         self.lines = collections.deque(maxlen=50)  # [utc_ms, what was said], settled lines only
         self.firmware = None
         self.battery = None
@@ -249,7 +249,7 @@ class BandLink(BleLink):
     async def set_mic(self, on):
         """Deepgram first, then the band's microphone; off in the other order, so the last words
         still arrive. A refusal (no key, a key Deepgram does not accept, no internet) leaves the
-        microphone off and the kit's own sentence in mic_err."""
+        microphone off and comes back as the kit's own sentence."""
         if on == bool(self.ears):
             return
         if on:
@@ -260,9 +260,7 @@ class BandLink(BleLink):
                 # start() prints the line that says where the sound goes, before any is sent
                 await asyncio.to_thread(ears.start, lambda text, final: loop.call_soon_threadsafe(self.heard, text, final))
             except speech.SpeechError as e:
-                self.mic_err = str(e)
-                self.push_state()
-                return
+                return str(e)  # the answer to this request only: a minute later the cause can be gone
             self.ears, self.sound = ears, queue.SimpleQueue()
             threading.Thread(target=feed, args=(ears, self.sound), daemon=True).start()
             self.log("microphone on: its sound goes to Deepgram")
@@ -406,8 +404,8 @@ class BandLink(BleLink):
             self.push_state()
             return 200, {"ok": True}
         if path == "/api/mic":
-            await self.set_mic(bool(args.get("on")))
-            return 200, {"ok": not self.mic_err, "err": self.mic_err}
+            err = await self.set_mic(bool(args.get("on")))
+            return 200, {"ok": not err, "err": err}
         return 404, {"error": "not found"}
 
     def stop_recording(self, final):

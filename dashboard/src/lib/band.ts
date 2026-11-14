@@ -7,7 +7,7 @@ export const MOTION_HZ = 50 // RATE in sensors/live_band.py
 export interface BandState extends LinkState {
   rec: { on: boolean; dir?: string; label?: string; since?: number }
   firmware: string | null
-  mic: { on: boolean; err: string | null } // err: why it is off although it was asked for
+  mic: { on: boolean; err: string | null } // err: why it went off by itself
   lines: [number, string][] // what the microphone heard: [utc ms, the settled line]
 }
 

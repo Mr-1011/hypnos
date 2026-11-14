@@ -7,6 +7,7 @@ import { Panel } from './Panel'
 export function Transcript({ className = '' }: { className?: string }) {
   const bd = useBand()
   const [busy, setBusy] = useState(false)
+  const [refused, setRefused] = useState('') // why the last switch-on did nothing; gone with the next try
   const box = useRef<HTMLDivElement>(null)
   const mic = bd.state?.mic
   const on = !!mic?.on
@@ -19,7 +20,8 @@ export function Transcript({ className = '' }: { className?: string }) {
 
   const toggle = async () => {
     setBusy(true)
-    await bandApi('mic', { on: !on })
+    const r = await bandApi('mic', { on: !on })
+    setRefused(r.ok ? '' : (r.err ?? ''))
     setBusy(false)
   }
 
@@ -40,7 +42,7 @@ export function Transcript({ className = '' }: { className?: string }) {
           ? "The band's microphone is on. Everything it hears goes over the internet to Deepgram (deepgram.com). Tell the people near the band."
           : `The microphone is off.${linked ? '' : ' Link the band to switch it on.'} When it is on, everything it hears goes over the internet to Deepgram, a company: tell the people near the band first.`}
       </p>
-      {mic?.err ? <p className="mic-note bad">{mic.err}</p> : null}
+      {refused || mic?.err ? <p className="mic-note bad">{refused || mic?.err}</p> : null}
       <div className="log said" ref={box}>
         {lines.map(([ts, text], i) => (
           <div key={`${ts}-${i}`}>
