@@ -82,7 +82,7 @@ and the agent answers. Both sides
 show in the Transcript panel. The voice plays on the Mac's sound output (the band has no
 speaker): the speakers, or AirPods linked to the Mac.
 
-Deepgram hears (Flux, which also decides when you have finished) and speaks (Aura); Gemini writes
+Deepgram hears (Flux, which also decides when you have finished) and speaks (Flux TTS, the voice Alexis at speed 0.7); Gemini writes
 the answers from `agent/prompt.md`, about 4 s after you stop. So the band's sound goes to Deepgram, and what is said goes as
 text to Google: tell the people near the band first.
 

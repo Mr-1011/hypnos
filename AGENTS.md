@@ -110,7 +110,7 @@ written.
 
 `voice.py` is one Pipecat pipeline in its own process, so that nothing in it can hold up a
 recording: the band's sound (`BandInput`, from `/api/audio`) to Deepgram Flux (speech to text and
-the end of a turn), Gemini (`prompt.md` is the system instruction), Deepgram Aura (the voice) and
+the end of a turn), Gemini (`prompt.md` is the system instruction), Deepgram Flux TTS (the voice: Alexis, speed 0.7) and
 the Mac's sound output. It is a `LiveServer` and holds no Bluetooth link. The Demo switch in
 the page's top bar starts and ends the loop (`POST /api/talk`; the user's rule, 2026-11-14, which
 replaced the start by the band's link). While it is off, nothing listens on `/api/audio`, so the
