@@ -3,7 +3,8 @@
 When you sleep, everything sleeps except your ears. Hypnos uses that: a channel where your agent
 and you talk while you fall asleep. Built at VexoHacks, 2026-11-14. A prototype, not a medical device.
 
-This repo so far: the live dashboard for the three sensors, and the band's microphone as text.
+This repo so far: the live dashboard for the three sensors, the band's microphone as text, and the
+voice loop (the band hears you, an agent answers with a soft voice).
 
 | Sensor | What it gives | Program | Port |
 |---|---|---|---|
@@ -12,26 +13,29 @@ This repo so far: the live dashboard for the three sensors, and the band's micro
 | Polar H10 (chest) | heart rate, R-R, 130 Hz ECG | `sensors/live_polar.py` | 5302 |
 
 The page (`dashboard/`, port 5300) is only a view. The three programs hold the Bluetooth links and
-write the recordings, so closing the tab never interrupts anything.
+write the recordings, so closing the tab never interrupts anything. The agent (`agent/voice.py`,
+port 5304) is a fourth program: it takes the band's sound from `live_band.py` and holds no link.
 
 ## Setup (once)
 
 ```bash
 gh repo clone VexoAI-Org/vexo-open-kit            # the kit stays a reference: git ignores the folder
+brew install portaudio                            # the agent's voice on the Mac's sound output
 uv venv .venv && uv pip install -p .venv/bin/python -r requirements.txt
 (cd dashboard && npm install)
 ```
 
 Keys go into `.env` in this folder (`cp env.example .env`, then write each key after its `=`).
 Git ignores `.env`; never commit a key and never paste one into a chat. The transcript needs
-`DEEPGRAM_API_KEY`. Everything else works with no key. `GOOGLE_API_KEY` and `ELEVENLABS_API_KEY`
-have a line in the form for the agent; nothing reads them yet.
+`DEEPGRAM_API_KEY`. The agent needs `DEEPGRAM_API_KEY` and `GOOGLE_API_KEY` (from AI Studio, in a
+project that has credit). Everything else works with no key. `ELEVENLABS_API_KEY` has a line in
+the form; nothing reads it yet.
 `.venv/bin/python vexo-open-kit/examples/python/check_keys.py` says whether the keys work.
 
 ## Run
 
 ```bash
-./run.sh          # the three programs and the page: http://localhost:5300
+./run.sh          # the three programs, the agent and the page: http://localhost:5300
 ./run.sh --sim    # the kit's pretend band in place of the real one
 ```
 
@@ -61,6 +65,21 @@ near the band first, and switch it off when someone asks. The band's light is so
 microphone is on. The text is English (`speech.create()` in `sensors/live_band.py` takes
 `language="de"`). With `./run.sh --sim` the pretend band plays a recording of a person reading a
 fable, so the transcript can be tried with the key and no band. The text is shown, not saved.
+
+## Agent
+
+The **Agent** switch, beside the Microphone switch, starts the voice loop: the agent asks one
+gentle question, the band's microphone hears the answer, and the agent answers back. Both sides
+show in the Transcript panel. The voice plays on the Mac's sound output (the band has no
+speaker): the speakers, or AirPods linked to the Mac.
+
+Deepgram hears (Flux, which also decides when you have finished) and speaks (Aura); Gemini writes
+the answers from `agent/prompt.md`. So the band's sound goes to Deepgram, and what is said goes as
+text to Google: tell the people near the band first. One switch at a time: with the agent on, the
+Microphone switch is locked.
+
+The band hears the Mac's speaker, so the agent does not listen while it speaks: you cannot
+interrupt it. Nothing of the talk is saved.
 
 ## Record
 
