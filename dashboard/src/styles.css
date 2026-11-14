@@ -629,12 +629,14 @@ canvas {
 .card > header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 10px;
 }
 .card-id {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 .card-title {
   font-size: 15px;

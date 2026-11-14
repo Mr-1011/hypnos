@@ -40,16 +40,19 @@ export function DeviceCard({ title, online, st, facts, api, recording }: Props) 
   return (
     <section className={`card ${look}`}>
       <header>
-        <span className={`pill ${look}`}>
-          <i />
-          {label}
-        </span>
+        <div className="card-id">
+          <div className="card-title">{title}</div>
+          <div className="card-name">{online ? (name ?? '-') : 'Program not running'}</div>
+        </div>
+        {/* the switch says on and off; the pill is for what it cannot say: a search, a link that is coming or lost, a program that is down */}
+        {look === 'streaming' || look === 'idle' ? null : (
+          <span className={`pill ${look}`}>
+            <i />
+            {label}
+          </span>
+        )}
         <button role="switch" aria-checked={on} aria-label={title} className={`switch ${on ? 'on' : ''}`} onClick={toggle} disabled={!online || busy} />
       </header>
-      <div className="card-id">
-        <div className="card-title">{title}</div>
-        <div className="card-name">{online ? (name ?? '-') : 'Program not running'}</div>
-      </div>
       <dl className="facts">
         {facts.map((f) => (
           <div key={f.label} className={f.tone ?? ''}>
