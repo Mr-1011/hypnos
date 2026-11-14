@@ -82,8 +82,10 @@ and the agent answers. Both sides
 show in the Transcript panel. The voice plays on the Mac's sound output (the band has no
 speaker): the speakers, or AirPods linked to the Mac.
 
-Deepgram hears (Flux, which also decides when you have finished) and speaks (Aura); Gemini writes
-the answers from `agent/prompt.md`, about 4 s after you stop. So the band's sound goes to Deepgram, and what is said goes as
+Deepgram hears (Flux, which also decides when you have finished) and speaks (Flux TTS,
+Alexis in English, speed 0.7, expressivity -2 for calm delivery); Gemini writes
+the answers from `agent/prompt.md`. The earlier Aura loop answered about 4 s after you stopped;
+latency and sound with Alexis still need a live check. So the band's sound goes to Deepgram, and what is said goes as
 text to Google: tell the people near the band first.
 
 The band is made to be worn for weeks and months, and the agent uses that. When something weighs
@@ -106,6 +108,11 @@ for one more situation. The Memory card rings what the tools looked at: the earl
 
 The band hears the Mac's speaker, so the agent does not listen while it speaks: you cannot
 interrupt it.
+
+English everyday conversation simulations are in [agent/simulations.md](agent/simulations.md):
+fictional daytime conversations and short bedtime replies for six situations. Use them as
+role-play scripts; they are not loaded into the person's memory or mock calendar/mail.
+The replies are examples, not fixed responses from the live model.
 
 ### The brain
 
