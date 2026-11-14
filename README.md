@@ -83,8 +83,27 @@ show in the Transcript panel. The voice plays on the Mac's sound output (the ban
 speaker): the speakers, or AirPods linked to the Mac.
 
 Deepgram hears (Flux, which also decides when you have finished) and speaks (Aura); Gemini writes
-the answers from `agent/prompt.md`, about 2 s after you stop. So the band's sound goes to Deepgram, and what is said goes as
+the answers from `agent/prompt.md`, about 4 s after you stop. So the band's sound goes to Deepgram, and what is said goes as
 text to Google: tell the people near the band first.
+
+The band is made to be worn for weeks and months, and the agent uses that. When something weighs
+on you at night, it answers with an earlier time when the same kind of thing went well: "Four
+weeks ago your presentation went well. Tomorrow can go the same way." It does that in two cases:
+you speak in your sleep, or you say nothing and the body shows stress (see Sleep).
+
+For that the agent works in a loop with tools. It calls the ones it needs, and then it speaks:
+
+- `recall` searches the earlier days for a kind of thing ("presentation pitch talk"). It finds
+  words, not meaning.
+- `read` gives the calendar or the mail (see The brain).
+- `sense` asks Google's decisions model (`gemini-decision-1`) which notes and which calendar or
+  mail items your last words touch, and whether you sound worried.
+- `body` gives the stage of sleep, the movement and the heart rate.
+- `stay_quiet` says nothing, for a sleeper whom words would wake.
+
+`agent/skills/` holds the steps for each case, one Markdown file each: write one more file there
+for one more situation. The Memory card rings what the tools looked at: the earlier days that
+`recall` found, the source that `read` gave, and what `sense` named.
 
 The band hears the Mac's speaker, so the agent does not listen while it speaks: you cannot
 interrupt it.
@@ -105,16 +124,11 @@ and the notes go to Google as text with each talk):
 The agent also reads a calendar and the mail, so it knows what comes without asking. **Both are
 made up for now**: `agent/mock/calendar.md` and `agent/mock/mail.md`, one line for each event or
 message, and no real account is connected. Write your own lines there for a demo; one more file
-in that folder is one more source. Their text goes to Google with each talk, like the notes.
+in that folder is one more source. Their text goes to Google when the agent reads them.
 
 The **Memory** card in the Live tab draws all of it as a graph: a dot for each note, each day and
 each calendar or mail item, and a line from a note or an item to the days it names. Point at a
 dot to read it. A hand edit shows after a reload of the page.
-
-Before the agent answers, Google's decisions model (`gemini-decision-1`) gets one call with the
-last lines of the talk and the sensors' numbers. It says which notes and which calendar or mail
-items your words touch, and whether you sound worried. The agent answers with that in mind, and
-the Memory card rings what was touched.
 
 ### Sleep
 
@@ -131,9 +145,10 @@ A pinch, or Cmd and a scroll, zooms; a sideways swipe pans; a click follows, wit
 middle, and a second click goes back to the night. It begins when the page opens, and a reload of
 the page starts it again.
 
-While the agent is on, the sensors make it speak without being asked, one sentence each time,
+While the agent is on, the sensors make it speak without being asked,
 about what the notes say comes up or weighs on you: when you go to bed, when you fall asleep
-(awake to drowsy), and when you do not rest (10 moving seconds in 30). It waits two minutes after
+(awake to drowsy), when you were asleep and stir (the brain runs fast again, or the body moves),
+and when you do not rest (10 moving seconds in 30). It waits two minutes after
 its last words before the next one, and the deeper the sleep, the less it says. The movement
 numbers are set for a demo by day (`agent/brain.py`, `CALM_GAP_S` in `agent/voice.py`).
 

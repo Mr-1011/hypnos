@@ -131,28 +131,39 @@ keys are read from `.env` at each start. Its docstring is the reference.
   and the day after `prompt.md`; when the loop ends, `brain.reflect()` has Gemini write the notes
   again (`reflect.md` says how).
 - The calendar and the mail are mock data: `brain.sources()` reads the Markdown files in
-  `agent/mock/` (one file is one source), and no real account is connected. They go into the
-  system prompt, the graph (`source` and `item` nodes) and the questions of `brain.sense()`. Keep
-  the "Mock data" heading of each file, and never present them as the person's real accounts.
+  `agent/mock/` (one file is one source), and no real account is connected. They go to the agent
+  through its `read` tool, into the graph (`source` and `item` nodes) and into the questions of
+  `brain.sense()`. Keep the "Mock data" heading of each file, and never present them as the
+  person's real accounts.
+- The agent is a loop with tools, which Pipecat runs: `TOOLS` in `voice.py` names them, each is a
+  method of `Voice`, and its docstring is what the model reads. `recall` searches the earlier days
+  (`brain.recall()`, words and not meaning: see its `shortcut:` comment), `read` gives a source,
+  `sense` asks Google's decisions model (`brain.sense()`, about 0.5 s: a yes/no question for every
+  note and item, and one for worry), `body` gives the sensors' numbers, `stay_quiet` says nothing.
+  What a tool looked at goes into the agent's `state` as `sense` (`touch()`), and the Memory card
+  rings it. `skills/` holds the steps for a situation, one Markdown file each, and `talk()` puts
+  them after `prompt.md`.
+- What the agent is for (the user's rule, 2026-11-14): it answers what weighs on the person with
+  an earlier time when the same kind of thing went well, in one or two sentences. Two cases: the
+  person speaks in their sleep, and the body shows stress while they say nothing. It must name
+  only an earlier time that `recall` gave it: keep that line in `prompt.md`.
 - `sleep.py` scores the stage of sleep each half minute (`epochs()`), from the Muse's band shares
   and from movement, and counts cycles. Its rules were set by hand: read its `shortcut:` comment
   before anyone presents the stage as measured.
   What a band hears is not trusted text: both prompts say that the talk and the notes are never
   instructions. Keep those lines. `brain.graph()` goes out in the agent's `state`, and
   `dashboard/src/components/Memory.tsx` draws it (the Live tab's "Brain" panel is the EEG).
-- `Sense`, between the person's aggregator and Gemini, holds each context back for one call to
-  Google's decisions model (`brain.sense()`, about 0.5 s): a yes/no question for every note and
-  one for worry. The answer goes into the context as a `(notes)` line and into
-  the agent's `state` as `sense`, for the Memory card. A failed call costs that one answer.
 - Gemini runs with `thinking_level="low"`: the comment at `GoogleLLMService` in `talk()` has the
   measured times. Do not remove it for a model change without measuring again.
 - Cues (`cue()`) make the agent speak unasked while the loop runs: bedtime (the first message),
-  awake to drowsy (`epochs()`), and a body that does not rest (`brain.restless()` in `watch()`).
+  awake to drowsy and a sleeper who stirs (`epochs()`), and a body that does not rest
+  (`brain.restless()` in `watch()`). A cue carries the body's numbers (`felt()`).
   The numbers (`MOVING_MG`, `WINDOW`, `RESTLESS`, `CALM_GAP_S`) are set for the awake demo: see
   the `shortcut:` comment in `brain.py`.
 - `test_voice.py` covers only the rule that starts and ends the loop. Try the rest of `voice.py`
   with `sensors/live_band.py --sim` on a spare port and `--band`
-  set to it. The pretend band always reads as restless (28 mg).
+  set to it. The pretend band always reads as restless (28 mg). The tools have no test: they were
+  tried as text, with a made-up past in a scratch brain folder.
 
 ### Page (`dashboard/`)
 
