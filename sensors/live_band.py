@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """live_band.py - the Vexo band on the Mac over Bluetooth: wrist acceleration and turning, gestures,
-steps, battery and signal, live, and a recording of the motion.
+steps, battery and signal, live, a recording of the motion, and what its microphone hears as text.
 
 One of the three Hypnos sensor programs (live_server.py has the shared plumbing):
 
@@ -12,17 +12,25 @@ number, checks the number again after the connect, sets the band's clock, and br
 link back for 2 minutes. After that this program looks again until the switch goes off.
 
 API on 127.0.0.1:5303 (the page reaches it as /api/band):
-    GET  /api/stream       server-sent events: state, data (20 Hz: acc and gyro samples), stats (2 Hz), event
+    GET  /api/stream       server-sent events: state, data (20 Hz: acc and gyro samples), stats (2 Hz), event,
+                           text (what the microphone hears: guesses with final 0, then the settled line)
     GET  /api/state
     POST /api/autoconnect  look for the band until it answers (double-tap it: it can be found for 60 s)
     POST /api/disconnect   and stop looking
     POST /api/record       {"on": true, "label": "YYYYMMDD-HHMM"} | {"on": false}
+    POST /api/mic          {"on": true} | {"on": false}; the answer has ok and, when refused, err
 
 Recording: ../data/band-<label>/motion.csv (utc_ms,n,ax,ay,az,gx,gy,gz; g and degrees/second, the
 time from the band's clock), events.log (connects, drops, gestures) and band-meta.json.
 
-The band takes one Bluetooth connection: close the kit's dashboard tab first. The microphone
-stays off here, so the band's light is free.
+The band takes one Bluetooth connection: close the kit's dashboard tab first.
+
+The microphone is off until /api/mic switches it on. While it is on the band's light is solid blue
+and takes no colour, and everything the microphone hears goes over the internet to Deepgram, a
+company: tell the people near the band first. The kit's speech.py is the Deepgram client. It reads
+DEEPGRAM_API_KEY from the environment or from .env in the folder the program is started in (the
+repo root with run.sh), and it prints the line that says where the sound goes: keep that line. The
+pretend band has no microphone: it plays the kit's recording of a person reading a fable.
 """
 import argparse
 import asyncio
@@ -30,15 +38,21 @@ import collections
 import json
 import math
 import os
+import queue
 import statistics
 import subprocess
 import sys
+import threading
 import time
 from datetime import datetime
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "vexo-open-kit" / "python"))  # the library: a folder in the kit
-from vexo_open import Band, band_name  # noqa: E402
+KIT = Path(__file__).resolve().parent.parent / "vexo-open-kit"
+sys.path.insert(0, str(KIT / "python"))               # the library: a folder in the kit
+sys.path.insert(0, str(KIT / "examples" / "python"))  # speech.py, the kit's Deepgram client
+import kit  # noqa: E402
+import speech  # noqa: E402
+from vexo_open import Band, audio, band_name  # noqa: E402
 
 from live_server import BleLink, rec_dir, save_json  # noqa: E402
 
@@ -88,6 +102,12 @@ class BandRecorder:
         save_json(self.dir / "band-meta.json", self.meta)
 
 
+def feed(ears, sound):
+    """Its own thread: a network that stalls must hold up the sound, never the motion recording."""
+    while (a := sound.get()) is not None:
+        ears.feed(a.opus, a.seq)
+
+
 class BandLink(BleLink):
     """BleLink for its link state, event log and remembered switch; the link itself is the kit's."""
 
@@ -97,7 +117,13 @@ class BandLink(BleLink):
     def __init__(self, transport="ble"):
         super().__init__()
         self.transport = transport   # "ble", or "sim" for the kit's pretend band
+        # the pretend band has no microphone: it plays the kit's recording of a person reading aloud
+        self.voice = {"audio_packets": audio.ogg_packets(kit.SAMPLE_SPEECH)} if transport == "sim" else {}
         self.band = None
+        self.ears = None             # the Deepgram connection; not None = the microphone is switched on
+        self.sound = None            # the band's packets on their way to feed()
+        self.mic_err = None          # why the microphone is off although it was asked for
+        self.lines = collections.deque(maxlen=50)  # [utc_ms, what was said], settled lines only
         self.firmware = None
         self.battery = None
         self.charging = None
@@ -125,11 +151,11 @@ class BandLink(BleLink):
         while self.want and not self.band:
             self.set_link("reconnecting" if self.down_since else "connecting")
             try:
-                band = await Band.connect(BAND, self.transport, auto_reconnect=True)
+                band = await Band.connect(BAND, self.transport, auto_reconnect=True, **self.voice)
                 try:
-                    for event in ("motion", "event", "activity", "battery", "link", "reconnecting", "reconnected", "disconnect"):
+                    for event in ("motion", "event", "activity", "audio", "battery", "link", "reconnecting", "reconnected", "disconnect"):
                         band.on(event, getattr(self, "on_" + event))
-                    await band.configure(motion=RATE, events=True, activity=True, battery=True, link=True)
+                    await band.configure(motion=RATE, events=True, activity=True, battery=True, link=True, audio=bool(self.ears))
                 except BaseException:
                     await band.disconnect()  # never leave a linked band that nobody holds
                     raise
@@ -170,12 +196,13 @@ class BandLink(BleLink):
         self.log(f"link down ({e.reason}), the library looks for the band for {e.seconds:.0f} s")
         self.set_link("reconnecting")
 
-    def on_reconnected(self, e):
+    async def on_reconnected(self, e):
         self.last_n = None  # sample numbers start again on a new link
         self.set_link("streaming")
         self.back()
         if e.failed:
             self.log(f"the band refused {', '.join(e.failed)}")
+        await self.mic_to_band()  # the library set the microphone as it was when the link dropped
 
     def on_disconnect(self, e):
         if e.reason == "closed":  # disconnect() below asked for it
@@ -206,6 +233,8 @@ class BandLink(BleLink):
                 await asyncio.wait_for(b.disconnect(), 5)
             except Exception:
                 pass
+        if self.ears:  # the microphone went off with the link: fetch the last words and hang up
+            await self.set_mic(False)
         if forget:
             self.forget()
         self.set_link("idle")
@@ -214,6 +243,58 @@ class BandLink(BleLink):
         self.want = self.want or band_name(BAND)
         self.ensure_link()
         return {"ok": 1}
+
+    # ---------- microphone ----------
+
+    async def set_mic(self, on):
+        """Deepgram first, then the band's microphone; off in the other order, so the last words
+        still arrive. A refusal (no key, a key Deepgram does not accept, no internet) leaves the
+        microphone off and the kit's own sentence in mic_err."""
+        if on == bool(self.ears):
+            return
+        if on:
+            self.mic_err = None
+            ears = speech.create()
+            loop = asyncio.get_running_loop()
+            try:
+                # start() prints the line that says where the sound goes, before any is sent
+                await asyncio.to_thread(ears.start, lambda text, final: loop.call_soon_threadsafe(self.heard, text, final))
+            except speech.SpeechError as e:
+                self.mic_err = str(e)
+                self.push_state()
+                return
+            self.ears, self.sound = ears, queue.SimpleQueue()
+            threading.Thread(target=feed, args=(ears, self.sound), daemon=True).start()
+            self.log("microphone on: its sound goes to Deepgram")
+            await self.mic_to_band()
+        else:
+            ears, self.ears = self.ears, None
+            self.sound.put(None)
+            try:
+                await self.mic_to_band()
+            finally:
+                try:
+                    await asyncio.to_thread(ears.stop)
+                except speech.SpeechError as e:  # Deepgram hung up by itself before any text came
+                    self.mic_err = str(e)
+                self.log("microphone off")
+        self.push_state()
+
+    async def mic_to_band(self):
+        """The band's microphone follows the switch. A link that is down has it off already; the
+        connect and on_reconnected set it again."""
+        if self.band and not self.band.reconnecting:
+            await self.band.configure(audio=bool(self.ears))
+
+    def on_audio(self, a):
+        if self.ears:
+            self.sound.put(a)
+
+    def heard(self, text, final):
+        ts = int(time.time() * 1000)
+        if final:
+            self.lines.append([ts, text])
+        self.broadcast({"t": "text", "ts": ts, "text": text, "final": int(final)})
 
     # ---------- what the band sends ----------
 
@@ -269,7 +350,8 @@ class BandLink(BleLink):
         if self.rec:
             rec = {"on": True, "dir": self.rec.dir.name, "label": self.rec.meta.get("label"),
                    "since": self.rec.meta["start_utc_ms"]}
-        return {"t": "state", **self.link_state(), "firmware": self.firmware, "rec": rec}
+        return {"t": "state", **self.link_state(), "firmware": self.firmware, "rec": rec,
+                "mic": {"on": bool(self.ears), "err": self.mic_err}, "lines": list(self.lines)}
 
     async def publisher(self):
         def cols(rows, nd):
@@ -284,6 +366,13 @@ class BandLink(BleLink):
                 self.broadcast({"t": "data", "acc": cols(p["acc"], 3), "gyro": cols(p["gyro"], 1)})
             if n % 10 == 0:
                 self.broadcast(self.stats())
+                # shortcut: a Deepgram connection that dies switches the microphone off and waits
+                # for the switch; upgrade to a reconnect when the microphone runs a whole night.
+                if self.ears and self.ears.error:
+                    why = self.ears.error
+                    await self.set_mic(False)
+                    self.mic_err = f"Deepgram stopped listening ({why}). Switch the microphone on again."
+                    self.push_state()
             if n % 40 == 0 and self.rec:
                 self.rec.flush()
 
@@ -316,6 +405,9 @@ class BandLink(BleLink):
                 self.stop_recording(final=True)
             self.push_state()
             return 200, {"ok": True}
+        if path == "/api/mic":
+            await self.set_mic(bool(args.get("on")))
+            return 200, {"ok": not self.mic_err, "err": self.mic_err}
         return 404, {"error": "not found"}
 
     def stop_recording(self, final):

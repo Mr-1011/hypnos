@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import io
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -55,6 +56,44 @@ class Sim(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(rows[0], "utc_ms,n,ax,ay,az,gx,gy,gz")
             self.assertGreater(len(rows), RATE)
             self.assertEqual(len(rows[-1].split(",")), 8)
+
+    async def test_microphone_to_text(self):
+        class Ears:  # what speech.create() gives, without Deepgram
+            error = None
+            fed = 0
+
+            def start(self, on_text):
+                self.on_text = on_text
+
+            def feed(self, packet, seq=None):
+                self.fed += 1
+
+            def stop(self):
+                return ""
+
+        ears = Ears()
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(live_band.speech, "create", return_value=ears), \
+                contextlib.redirect_stdout(io.StringIO()):
+            b = BandLink("sim")
+            b.data = Path(d)
+            await b.autoconnect()
+            await asyncio.sleep(1)
+            self.assertEqual(await b.route("POST", "/api/mic", b'{"on": true}'), (200, {"ok": True, "err": None}))
+            await asyncio.sleep(0.5)
+            self.assertGreater(ears.fed, 10)  # the pretend band's voice, 50 packets a second
+            t = threading.Thread(target=ears.on_text, args=("Hello there.", True))  # Deepgram answers on its own thread
+            t.start()
+            t.join()
+            await asyncio.sleep(0.05)
+            self.assertTrue(b.state()["mic"]["on"])
+            self.assertEqual(b.state()["lines"][-1][1], "Hello there.")
+
+            await b.route("POST", "/api/mic", b'{"on": false}')
+            self.assertFalse(b.state()["mic"]["on"])
+            fed = ears.fed
+            await asyncio.sleep(0.3)
+            self.assertEqual(ears.fed, fed)  # nothing goes out after the switch
+            await b.shutdown()
 
 
 if __name__ == "__main__":
