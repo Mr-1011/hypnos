@@ -91,12 +91,13 @@ select:focus-visible {
   gap: 10px;
   flex-wrap: wrap;
 }
-/* the name in thin capitals set wide, as cut into stone (the user's rule, 2026-11-14) */
+/* the name in capitals set wide, as cut into stone (the user's rule, 2026-11-14). Not the
+   thinnest cut: that was too thin beside the rest of the page */
 h1 {
   font-family: 'Avenir Next', Avenir, 'Helvetica Neue', sans-serif;
-  font-size: 17px;
-  font-weight: 200;
-  letter-spacing: 0.34em;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
   text-transform: uppercase;
 }
 .pill {
