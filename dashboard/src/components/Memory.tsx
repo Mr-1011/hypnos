@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { useAgent, type BrainNode } from '../lib/agent'
 import { Panel } from './Panel'
 
-const COLOR: Record<BrainNode['kind'], string> = { person: '#f3f4f6', head: '#e0b64d', line: '#c47ad9', day: '#4c9be8', source: '#19d18d', item: '#5fbf9f' }
-const NAME: Record<BrainNode['kind'], string> = { person: 'the person', head: 'a part of the notes', line: 'a note', day: 'a day', source: 'connected', item: 'from a connected source' }
+const COLOR: Record<BrainNode['kind'], string> = { person: '#f3f4f6', head: '#e0b64d', line: '#c47ad9', day: '#4c9be8', source: '#19d18d', item: '#5fbf9f', said: '#8fbdf0', detail: '#9bd8c2' }
+const NAME: Record<BrainNode['kind'], string> = { person: 'the person', head: 'a part of the notes', line: 'a note', day: 'a day', source: 'connected', item: 'from a connected source', said: 'that day', detail: 'more about it' }
 
 type P = { x: number; y: number; vx: number; vy: number }
 
@@ -26,6 +26,15 @@ export function Memory({ className = '', children }: { className?: string; child
   }, [])
   const [, setFrame] = useState(0)
   const [hot, setHot] = useState<string | null>(null)
+  // a dot can hold more dots (in): a day holds what was said on it. A click opens and closes it.
+  const [open, setOpen] = useState<ReadonlySet<string>>(new Set())
+  const toggle = (id: string) => setOpen((o) => new Set(o.has(id) ? [...o].filter((x) => x !== id) : [...o, id]))
+  const holds = useMemo(() => new Set((brain?.nodes ?? []).map((n) => n.in)), [brain])
+  const shown = useMemo(() => {
+    const nodes = (brain?.nodes ?? []).filter((n) => !n.in || open.has(n.in))
+    const ids = new Set(nodes.map((n) => n.id))
+    return { nodes, links: (brain?.links ?? []).filter(([a, b]) => ids.has(a) && ids.has(b)) }
+  }, [brain, open])
 
   const near = useMemo(() => {
     const m = new Map<string, Set<string>>()
@@ -39,8 +48,8 @@ export function Memory({ className = '', children }: { className?: string; child
   useEffect(() => {
     if (!brain) return
     const p = pos.current
-    for (const id of [...p.keys()]) if (!brain.nodes.some((n) => n.id === id)) p.delete(id)
-    brain.nodes.forEach((n, i) => {
+    for (const id of [...p.keys()]) if (!shown.nodes.some((n) => n.id === id)) p.delete(id)
+    shown.nodes.forEach((n, i) => {
       // a new dot starts beside one it is linked to, so it grows out of the picture and does not fly in
       const from = [...(near.get(n.id) ?? [])].map((id) => p.get(id)).find((q) => q)
       if (!p.has(n.id)) p.set(n.id, { x: (from?.x ?? W / 2) + 12 * Math.cos(i * 2.4), y: (from?.y ?? H / 2) + 12 * Math.sin(i * 2.4), vx: 0, vy: 0 })
@@ -48,7 +57,7 @@ export function Memory({ className = '', children }: { className?: string; child
     let heat = 1
     let raf = 0
     const step = () => {
-      const ps = brain.nodes.map((n) => p.get(n.id)!)
+      const ps = shown.nodes.map((n) => p.get(n.id)!)
       for (let i = 0; i < ps.length; i++) {
         for (let j = i + 1; j < ps.length; j++) {
           const dx = ps[i].x - ps[j].x
@@ -61,7 +70,7 @@ export function Memory({ className = '', children }: { className?: string; child
           ps[j].vy -= dy * f
         }
       }
-      for (const [a, b] of brain.links) {
+      for (const [a, b] of shown.links) {
         const A = p.get(a)!
         const B = p.get(b)!
         const dx = B.x - A.x
@@ -85,9 +94,9 @@ export function Memory({ className = '', children }: { className?: string; child
     }
     raf = requestAnimationFrame(step)
     return () => cancelAnimationFrame(raf)
-  }, [brain, near, W, H])
+  }, [brain, shown, near, W, H])
 
-  const nodes = (brain?.nodes ?? []).filter((n) => pos.current.has(n.id))
+  const nodes = shown.nodes.filter((n) => pos.current.has(n.id))
   const lit = (id: string) => !hot || id === hot || !!near.get(hot)?.has(id)
   const hotNode = nodes.find((n) => n.id === hot)
 
@@ -99,21 +108,30 @@ export function Memory({ className = '', children }: { className?: string; child
     >
       <div className="memory">
         <svg ref={svg} viewBox={`0 0 ${W} ${H}`} role="img" aria-label="What the agent remembers about the person, as a graph of notes and days">
-          {(brain?.links ?? []).map(([a, b]) => {
+          {shown.links.map(([a, b]) => {
             const A = pos.current.get(a)
             const B = pos.current.get(b)
             return A && B ? <line key={`${a}|${b}`} x1={A.x} y1={A.y} x2={B.x} y2={B.y} className={hot && (a === hot || b === hot) ? 'hot' : hot ? 'dim' : ''} /> : null
           })}
           {nodes.map((n) => {
             const q = pos.current.get(n.id)!
+            // near counts the dots inside too: a dot that holds much is big, also while it is closed
             const r = n.kind === 'person' ? 7 : 3 + 1.4 * Math.sqrt(near.get(n.id)?.size ?? 0)
             // a note's own words are long: the dot shows their start, the line below the picture shows all
-            const whole = (n.kind !== 'line' && n.kind !== 'item') || !!sense?.about.includes(n.id)
-            // an item begins with its date: the link to the day shows that, so the dot shows the words
-            const words = n.kind === 'item' ? n.label.replace(/^[\d: -]+/, '') : n.label
+            const whole = (n.kind !== 'line' && n.kind !== 'item' && !n.in) || !!sense?.about.includes(n.id)
+            // an item begins with its date: the link to the day shows that, so the dot shows the words.
+            // A day's line begins with its time and who said it
+            const words = n.kind === 'item' ? n.label.replace(/^[\d: -]+/, '') : n.kind === 'said' ? n.label.replace(/^[\d:]+ \w+: /, '') : n.label
+            const more = holds.has(n.id)
             const label = n.id === hot && !whole ? '' : whole || words.length <= 22 ? words : `${words.slice(0, 20)}...`
             return (
-              <g key={n.id} className={`${n.kind === 'source' ? 'head' : n.kind} ${lit(n.id) ? '' : 'dim'}`} onMouseEnter={() => setHot(n.id)} onMouseLeave={() => setHot(null)}>
+              <g
+                key={n.id}
+                className={`${n.kind === 'source' ? 'head' : n.kind} ${lit(n.id) ? '' : 'dim'} ${more ? 'more' : ''}`}
+                onMouseEnter={() => setHot(n.id)}
+                onMouseLeave={() => setHot(null)}
+                {...(more ? { role: 'button', tabIndex: 0, 'aria-expanded': open.has(n.id), onClick: () => toggle(n.id), onKeyDown: (e: KeyboardEvent<SVGGElement>) => e.key === 'Enter' && toggle(n.id) } : {})}
+              >
                 <circle cx={q.x} cy={q.y} r={r + 6} fill="transparent" />
                 {/* what the person's last words touch, says the decisions model */}
                 {sense?.about.includes(n.id) ? <circle className="touched" cx={q.x} cy={q.y} r={r + 5} stroke={COLOR[n.kind]} /> : null}

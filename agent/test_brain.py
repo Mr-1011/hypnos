@@ -4,6 +4,7 @@
 """
 import asyncio
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from types import SimpleNamespace as NS
@@ -48,6 +49,19 @@ class Brain(unittest.TestCase):
             self.assertIn(["Days/2026-11-14: a long day", "2026-11-14"], g["links"])
             self.assertIn(["person", "2026-11-14"], g["links"])
             self.assertNotIn(["person", "2026-11-15"], g["links"])
+
+    def test_the_graph_puts_what_can_be_opened_inside_its_dot(self):
+        mail = {"mail": "# made up\n- from Mum: call me\n  - she waits since Monday\n- from the bank\n"}
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(brain, "DIR", Path(d)), \
+                mock.patch.object(brain, "sources", return_value=mail):
+            brain.note("2026-11-14", 0, "you", "Long.")
+            g = brain.graph()
+            inside = {n["label"]: (n["kind"], n["in"]) for n in g["nodes"] if "in" in n}
+            self.assertEqual(inside["she waits since Monday"], ("detail", "mail/from Mum: call me"))
+            said = time.strftime("%H:%M", time.localtime(0)) + " you: Long."
+            self.assertEqual(inside[said], ("said", "2026-11-14"))  # the day's line, without the Markdown stars
+            self.assertEqual(len(inside), 2)  # the bank's line is not indented: it is a dot of its own
+            self.assertIn(["mail/from Mum: call me", "mail/from Mum: call me/she waits since Monday"], g["links"])
 
     def test_recall_finds_the_words_in_the_earlier_days_newest_first(self):
         with tempfile.TemporaryDirectory() as d, mock.patch.object(brain, "DIR", Path(d)):

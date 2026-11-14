@@ -990,6 +990,10 @@ button.on {
   cursor: default;
   transition: opacity 0.15s;
 }
+/* a dot that holds more dots: a click opens it */
+.memory g.more {
+  cursor: pointer;
+}
 .memory text {
   font-size: 9px;
   fill: var(--text-3);
