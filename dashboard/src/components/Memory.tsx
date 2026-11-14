@@ -1,0 +1,127 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useAgent, type BrainNode } from '../lib/agent'
+import { Panel } from './Panel'
+
+const W = 720
+const H = 280
+const COLOR: Record<BrainNode['kind'], string> = { person: '#f3f4f6', head: '#e0b64d', line: '#c47ad9', day: '#4c9be8' }
+const NAME: Record<BrainNode['kind'], string> = { person: 'the person', head: 'a part of the notes', line: 'a note', day: 'a day' }
+
+type P = { x: number; y: number; vx: number; vy: number }
+
+// What the agent keeps about the person (agent/brain.py), drawn the way a notes app draws its
+// graph: every note and every day is a dot, and a line joins what belongs together. The dots push
+// each other apart and the links pull, until the picture rests.
+export function Memory({ className = '' }: { className?: string }) {
+  const ag = useAgent()
+  const brain = ag.state?.brain
+  const pos = useRef(new Map<string, P>())
+  const [, setFrame] = useState(0)
+  const [hot, setHot] = useState<string | null>(null)
+
+  const near = useMemo(() => {
+    const m = new Map<string, Set<string>>()
+    for (const [a, b] of brain?.links ?? []) {
+      m.set(a, (m.get(a) ?? new Set()).add(b))
+      m.set(b, (m.get(b) ?? new Set()).add(a))
+    }
+    return m
+  }, [brain])
+
+  useEffect(() => {
+    if (!brain) return
+    const p = pos.current
+    for (const id of [...p.keys()]) if (!brain.nodes.some((n) => n.id === id)) p.delete(id)
+    brain.nodes.forEach((n, i) => {
+      // a new dot starts beside one it is linked to, so it grows out of the picture and does not fly in
+      const from = [...(near.get(n.id) ?? [])].map((id) => p.get(id)).find((q) => q)
+      if (!p.has(n.id)) p.set(n.id, { x: (from?.x ?? W / 2) + 12 * Math.cos(i * 2.4), y: (from?.y ?? H / 2) + 12 * Math.sin(i * 2.4), vx: 0, vy: 0 })
+    })
+    let heat = 1
+    let raf = 0
+    const step = () => {
+      const ps = brain.nodes.map((n) => p.get(n.id)!)
+      for (let i = 0; i < ps.length; i++) {
+        for (let j = i + 1; j < ps.length; j++) {
+          const dx = ps[i].x - ps[j].x
+          const dy = ps[i].y - ps[j].y
+          const d2 = dx * dx + dy * dy + 1
+          const f = 5200 / d2 / Math.sqrt(d2)
+          ps[i].vx += dx * f
+          ps[i].vy += dy * f
+          ps[j].vx -= dx * f
+          ps[j].vy -= dy * f
+        }
+      }
+      for (const [a, b] of brain.links) {
+        const A = p.get(a)!
+        const B = p.get(b)!
+        const dx = B.x - A.x
+        const dy = B.y - A.y
+        const f = (0.05 * (Math.hypot(dx, dy) - 84)) / (Math.hypot(dx, dy) + 1)
+        A.vx += dx * f
+        A.vy += dy * f
+        B.vx -= dx * f
+        B.vy -= dy * f
+      }
+      for (const q of ps) {
+        // the card is wide and low: the pull to the middle is weaker sideways
+        q.vx = (q.vx + (W / 2 - q.x) * 0.0015) * 0.8
+        q.vy = (q.vy + (H / 2 - q.y) * 0.012) * 0.8
+        q.x = Math.min(W - 60, Math.max(60, q.x + q.vx * heat))
+        q.y = Math.min(H - 26, Math.max(14, q.y + q.vy * heat))
+      }
+      heat *= 0.985
+      setFrame((n) => n + 1)
+      if (heat > 0.03) raf = requestAnimationFrame(step)
+    }
+    raf = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(raf)
+  }, [brain, near])
+
+  const nodes = (brain?.nodes ?? []).filter((n) => pos.current.has(n.id))
+  const lit = (id: string) => !hot || id === hot || !!near.get(hot)?.has(id)
+  const hotNode = nodes.find((n) => n.id === hot)
+
+  return (
+    <Panel title="Memory" className={className} tools={<span className="hr">{nodes.length > 1 ? `${nodes.length - 1} notes and days` : ''}</span>}>
+      <div className="memory">
+        <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="What the agent remembers about the person, as a graph of notes and days">
+          {(brain?.links ?? []).map(([a, b]) => {
+            const A = pos.current.get(a)
+            const B = pos.current.get(b)
+            return A && B ? <line key={`${a}|${b}`} x1={A.x} y1={A.y} x2={B.x} y2={B.y} className={hot && (a === hot || b === hot) ? 'hot' : hot ? 'dim' : ''} /> : null
+          })}
+          {nodes.map((n) => {
+            const q = pos.current.get(n.id)!
+            const r = n.kind === 'person' ? 7 : 3 + 1.4 * Math.sqrt(near.get(n.id)?.size ?? 0)
+            // a note's own words are long: the dot shows their start, the line below the picture shows all
+            const label = n.kind === 'line' && n.id !== hot ? (n.label.length > 22 ? `${n.label.slice(0, 20)}...` : n.label) : n.kind === 'line' ? '' : n.label
+            return (
+              <g key={n.id} className={`${n.kind} ${lit(n.id) ? '' : 'dim'}`} onMouseEnter={() => setHot(n.id)} onMouseLeave={() => setHot(null)}>
+                <circle cx={q.x} cy={q.y} r={r + 6} fill="transparent" />
+                <circle cx={q.x} cy={q.y} r={r} fill={COLOR[n.kind]} />
+                <text x={q.x} y={q.y + r + 11} textAnchor="middle">
+                  {label}
+                </text>
+              </g>
+            )
+          })}
+        </svg>
+        <p className="memory-said">
+          {hotNode ? (
+            <>
+              <b style={{ color: COLOR[hotNode.kind] }}>{NAME[hotNode.kind]}</b> {hotNode.label}
+            </>
+          ) : !ag.online ? (
+            'The agent program does not answer.'
+          ) : nodes.length > 1 ? (
+            'Each dot is a note or a day. Point at one to read it.'
+          ) : (
+            'Nothing is remembered yet. The notes grow with each talk.'
+          )}
+        </p>
+      </div>
+    </Panel>
+  )
+}
