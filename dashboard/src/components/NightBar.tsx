@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { PROGS, nightLabel, startNight, stopNight, type Prog } from '../lib/night'
+import { PROGS, startNight, stopNight, type Prog } from '../lib/night'
 import { useBand } from '../lib/band'
 import { useMuse } from '../lib/muse'
 import { usePolar } from '../lib/polar'
@@ -17,7 +17,7 @@ function useNow(on: boolean) {
   return now
 }
 
-// The header: the night's label and clock, and one Start/Stop for the three programs. What each
+// The header: one Start/Stop for the three programs, and a clock while they record. What each
 // device does is on its card; here a program only shows up when Start or Stop failed for it.
 export function NightBar() {
   const bd = useBand()
@@ -60,11 +60,9 @@ export function NightBar() {
         {night ? (
           <span className="night on">
             <i />
-            {label ?? ''} <b>{Number.isFinite(since) ? hms(now - since) : ''}</b>
+            <b>{Number.isFinite(since) ? hms(now - since) : ''}</b>
           </span>
-        ) : (
-          <span className="night">{nightLabel()}</span>
-        )}
+        ) : null}
       </div>
       <div className="controls">
         {PROGS.filter((p) => errors[p]).map((p) => (
