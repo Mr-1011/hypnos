@@ -12,6 +12,10 @@ One Pipecat pipeline, in its own process so that nothing here can hold up a reco
 brain.py is its memory: every line of the talk goes into the day's Markdown file, the agent starts
 with the notes about the person, and when a talk ends Gemini writes those notes again.
 
+While the loop runs it also reads the movement numbers of the band and of the Muse (their
+/api/stream, "stats"). A body that does not rest (brain.restless) gets one calm sentence, with
+nobody asking: the cue goes to Gemini like a line of the talk, and the notes say what to speak to.
+
     ./run.sh                 starts it with the three sensor programs
 
 API on 127.0.0.1:5304 (the page reaches it as /api/agent):
@@ -50,7 +54,8 @@ import aiohttp  # noqa: E402
 from dotenv import dotenv_values  # noqa: E402
 from loguru import logger  # noqa: E402
 from pipecat.frames.frames import (  # noqa: E402
-    BotStartedSpeakingFrame, BotStoppedSpeakingFrame, InputAudioRawFrame, InterimTranscriptionFrame, LLMRunFrame)
+    BotStartedSpeakingFrame, BotStoppedSpeakingFrame, InputAudioRawFrame, InterimTranscriptionFrame,
+    LLMMessagesAppendFrame, LLMRunFrame)
 from pipecat.pipeline.pipeline import Pipeline  # noqa: E402
 from pipecat.pipeline.runner import PipelineRunner  # noqa: E402
 from pipecat.pipeline.worker import PipelineWorker  # noqa: E402
@@ -72,6 +77,8 @@ RATE = 16000                  # the band's microphone: 16 kHz, mono, 20 ms a pac
 MODEL = "gemini-4-hydrogen"   # the fast one of the three the key reaches (listed 2026-11-14)
 VOICE = "aura-2-pandora-en"   # Deepgram calls it smooth, calm, melodic, breathy
 ECHO_S = 0.6                  # the room still holds the agent's voice this long after it stops
+CALM_GAP_S = 120              # no calm words sooner than this after the agent last spoke; a guess, no night behind it
+CUE = "(cue) The person moves a lot and does not rest."
 KEYS = ("DEEPGRAM_API_KEY", "GOOGLE_API_KEY")
 NOTE = ("Note: while the agent runs, everything the band's microphone hears is sent over the internet to "
         "Deepgram (deepgram.com), and what is said goes as text to Google and back to Deepgram for the "
@@ -145,9 +152,11 @@ class Guesses(FrameProcessor):
 class Voice(LiveServer):
     name = "Agent"
 
-    def __init__(self, band_url):
+    def __init__(self, band_url, movers):
         super().__init__()
         self.band_url = band_url
+        self.movers = movers  # the event streams that carry a movement number: the band's and the Muse's
+        self.spoke = 0.0      # time.time() of the agent's last words
         self.worker = None   # the running pipeline; not None = the agent is on
         self.loop = None     # the task that runs it
         self.err = None      # what went wrong in the loop, in the service's own words
@@ -167,6 +176,8 @@ class Voice(LiveServer):
             self.lines.append([ts, who, text])
             brain.note(self.day, ts, who, text)
             self.heard = self.heard or who == "you"
+            if who == "agent":
+                self.spoke = time.time()
         self.broadcast({"t": "text", "ts": ts, "who": who, "text": text, "final": int(final)})
 
     async def talk(self, on):
@@ -183,6 +194,7 @@ class Voice(LiveServer):
             return f"The agent needs {' and '.join(missing)} in .env (env.example has the form)."
         print(NOTE, flush=True)  # before any sound is sent
         self.day, self.heard, self.google = brain.today(), False, keys["GOOGLE_API_KEY"]
+        self.spoke = time.time()
         about = brain.notes()
         system = (HERE / "prompt.md").read_text() + time.strftime("\nToday is %A, %Y-%m-%d.\n") + (
             f"\n# Your notes about this person\n\n{about}" if about else "")
@@ -219,13 +231,38 @@ class Voice(LiveServer):
         self.push_state()
         return None
 
+    async def watch(self, url):
+        """One program's movement numbers. A body that does not rest gets calm words, unasked."""
+        moves = collections.deque(maxlen=brain.WINDOW)
+        while True:
+            try:
+                # read_bufsize: one event is one line, and the Muse's are long
+                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=None), read_bufsize=2 ** 20) as http, \
+                        http.get(url) as r:
+                    async for line in r.content:
+                        if b'"stats"' not in line:
+                            continue
+                        m = json.loads(line[6:])
+                        moves.append(m["move"] if "move" in m else (m.get("motion") or {}).get("move"))  # band | Muse
+                        if brain.restless(moves) and time.time() - self.spoke > CALM_GAP_S:
+                            self.spoke = time.time()
+                            moves.clear()
+                            brain.note(self.day, int(time.time() * 1000), "sensors", "The person moved a lot.")
+                            await self.worker.queue_frames([LLMMessagesAppendFrame([{"role": "user", "content": CUE}], run_llm=True)])
+            except aiohttp.ClientError:
+                pass
+            await asyncio.sleep(1)  # that program is not up, or it restarts
+
     async def run_loop(self):
+        watchers = [asyncio.create_task(self.watch(url)) for url in self.movers]
         try:
             runner = PipelineRunner(handle_sigint=False)
             await runner.add_workers(self.worker)
             await runner.run()
         except Exception as e:  # a pipeline that dies must leave the switch off and say why
             self.err = str(e) or type(e).__name__
+        for w in watchers:
+            w.cancel()
         self.worker = None
         self.push_state()
         if self.heard:
@@ -255,10 +292,11 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=5304)
     ap.add_argument("--band", default="http://127.0.0.1:5303", help="where live_band.py answers")
+    ap.add_argument("--muse", default="http://127.0.0.1:5301", help="where live_muse.py answers")
     args = ap.parse_args()
     logger.remove()
     logger.add(sys.stderr, level="INFO")  # Pipecat's default prints every frame
-    Voice(args.band + "/api/audio").run(args.port)
+    Voice(args.band + "/api/audio", [args.band + "/api/stream", args.muse + "/api/stream"]).run(args.port)
 
 
 if __name__ == "__main__":
