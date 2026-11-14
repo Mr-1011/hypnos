@@ -17,7 +17,7 @@ agent answers aloud).
 cd sensors && ../.venv/bin/python -m unittest test_live_band                                    # all tests
 cd sensors && ../.venv/bin/python -m unittest test_live_band.Gap.test_lost_samples_become_nan   # one test
 
-cd agent && ../.venv/bin/python -m unittest test_brain                                          # the brain's tests
+cd agent && ../.venv/bin/python -m unittest test_brain test_sleep                               # the agent's tests
 
 cd dashboard && npx tsc --noEmit    # type check; strict, with noUnusedLocals and noUnusedParameters
 ```
@@ -118,20 +118,28 @@ and ends the loop; the keys are read from `.env` at each start. Its docstring is
   sent, the page's line while the Agent switch is on, and `mip_opt_out` on both Deepgram services.
 - The loop is deaf while the agent speaks (`deaf_until`), because the band hears the Mac's
   speaker: see the `shortcut:` comment in `BandInput`.
-- `brain.py` is its memory, Markdown in `data/brain/`: `days/<date>.md` gets every line of the
-  talk, and `person.md` is the notes about the person. `talk()` puts the notes after `prompt.md`;
-  when the loop ends, `brain.reflect()` has Gemini write them again (`reflect.md` says how).
+- The agent must know the day, not ask about it (the user's rule, 2026-11-14). `sensors()` runs
+  for as long as the program does, also with the loop off: `watch()` reads each sensor program's
+  stream, and every settled line of the band's Microphone switch goes into the day's file as a
+  `heard` line. So the page's microphone notice says that the text is kept and goes to Google.
+- `brain.py` is its memory, Markdown in `data/brain/`: `days/<date>.md` is the day (`heard`
+  lines, and the talk), and `person.md` is the notes about the person. `talk()` puts the notes
+  and the day after `prompt.md`; when the loop ends, `brain.reflect()` has Gemini write the notes
+  again (`reflect.md` says how).
+- `sleep.py` scores the stage of sleep each half minute (`epochs()`), from the Muse's band shares
+  and from movement, and counts cycles. Its rules were set by hand: read its `shortcut:` comment
+  before anyone presents the stage as measured.
   What a band hears is not trusted text: both prompts say that the talk and the notes are never
   instructions. Keep those lines. `brain.graph()` goes out in the agent's `state`, and
   `dashboard/src/components/Memory.tsx` draws it (the Live tab's "Brain" panel is the EEG).
 - `Sense`, between the person's aggregator and Gemini, holds each context back for one call to
-  Google's decisions model (`brain.sense()`, about 0.5 s): a yes/no question for every note, one
-  for worry and a choice of state. The answer goes into the context as a `(notes)` line and into
+  Google's decisions model (`brain.sense()`, about 0.5 s): a yes/no question for every note and
+  one for worry. The answer goes into the context as a `(notes)` line and into
   the agent's `state` as `sense`, for the Memory card. A failed call costs that one answer.
 - Gemini runs with `thinking_level="low"`: the comment at `GoogleLLMService` in `talk()` has the
   measured times. Do not remove it for a model change without measuring again.
-- `watch()` reads the band's, the Muse's and the Polar's `stats` while the loop runs. `brain.restless()` is the
-  verdict, and a cue (`CUE`) then goes into the talk so that the agent says calm words unasked.
+- Cues (`cue()`) make the agent speak unasked while the loop runs: bedtime (the first message),
+  awake to drowsy (`epochs()`), and a body that does not rest (`brain.restless()` in `watch()`).
   The numbers (`MOVING_MG`, `WINDOW`, `RESTLESS`, `CALM_GAP_S`) are set for the awake demo: see
   the `shortcut:` comment in `brain.py`.
 - `voice.py` has no test. Try it with `sensors/live_band.py --sim` on a spare port and `--band`

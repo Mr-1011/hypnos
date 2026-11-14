@@ -64,12 +64,16 @@ text, while people speak. The sound goes over the internet to Deepgram, a compan
 near the band first, and switch it off when someone asks. The band's light is solid blue while the
 microphone is on. The text is English (`speech.create()` in `sensors/live_band.py` takes
 `language="de"`). With `./run.sh --sim` the pretend band plays a recording of a person reading a
-fable, so the transcript can be tried with the key and no band. The text is shown, not saved.
+fable, so the transcript can be tried with the key and no band. While the agent program runs, every
+settled line is also kept in the day's file (see The brain): the people near the band must know
+that too.
 
 ## Agent
 
-The **Agent** switch, beside the Microphone switch, starts the voice loop: the agent asks one
-gentle question, the band's microphone hears the answer, and the agent answers back. Both sides
+The **Agent** switch, beside the Microphone switch, starts the voice loop at bedtime. The agent
+does not ask how the day was: it knows the day from what the band heard (keep the Microphone
+switch on through the day), and speaks from that. The band's microphone hears what you say back,
+and the agent answers. Both sides
 show in the Transcript panel. The voice plays on the Mac's sound output (the band has no
 speaker): the speakers, or AirPods linked to the Mac.
 
@@ -86,10 +90,11 @@ interrupt it.
 The agent keeps what it learns as Markdown in `data/brain/` (git ignores it; it stays on this Mac,
 and the notes go to Google as text with each talk):
 
-- `days/<date>.md`: every line of that day's talk, both sides.
+- `days/<date>.md`: the day, a line for each sentence: what the band's microphone heard while
+  the Microphone switch was on (you and whoever was near), and both sides of the talk at night.
 - `person.md`: the notes about you: what is on your mind, what comes up, what helps. The agent
-  reads them at the start of a talk, so it can connect what you say to what it knows. When a talk
-  ends, Gemini writes them again from the old notes and the day's talk (`agent/reflect.md` says
+  reads them and the day at the start of a talk, so it knows what weighs on you. When a talk
+  ends, Gemini writes them again from the old notes and the day (`agent/reflect.md` says
   how). You can write into this file by hand; the notes before the last rewrite stay in
   `person.before.md`.
 
@@ -99,15 +104,22 @@ reload of the page.
 
 Before the agent answers, Google's decisions model (`gemini-decision-1`) gets one call with the
 last lines of the talk and the sensors' numbers. It says which notes your words touch, whether
-you sound worried, and the state you seem to be in: awake, drowsy, asleep or restless. The agent
-answers with that in mind, and the Memory card rings the touched notes and shows the state. The
-state is a guess from words and movement, not a sleep stage.
+you sound worried. The agent answers with that in mind, and the Memory card rings the touched
+notes.
 
-While the agent is on it also watches how much the wrist (band) and the head (Muse) move. When
-you do not rest, 10 moving seconds in 30, it says one calm sentence without being asked, about
-what the notes say comes up or weighs on you. It waits two minutes after its last words before it
-does that again. These numbers are set for a demo by day, not from a real night
-(`agent/brain.py`, `CALM_GAP_S` in `agent/voice.py`).
+### Sleep
+
+Every half minute the agent program scores the stage of sleep (`agent/sleep.py`): awake, drowsy,
+light, deep or REM, from the Muse's EEG bands and from wrist and head movement, and it counts the
+cycles of the night. With no Muse on the head it has only stillness and the clock, the way a
+wrist tracker scores sleep. The Memory card's header shows the stage. The rules were set by hand
+and no night was held against them: a prototype's estimate, not a sleep lab's.
+
+While the agent is on, the sensors make it speak without being asked, one sentence each time,
+about what the notes say comes up or weighs on you: when you go to bed, when you fall asleep
+(awake to drowsy), and when you do not rest (10 moving seconds in 30). It waits two minutes after
+its last words before the next one, and the deeper the sleep, the less it says. The movement
+numbers are set for a demo by day (`agent/brain.py`, `CALM_GAP_S` in `agent/voice.py`).
 
 ## Record
 
