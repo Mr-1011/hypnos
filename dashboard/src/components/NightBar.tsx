@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { PROGS, startNight, stopNight, type Prog } from '../lib/night'
 import { useBand } from '../lib/band'
 import { useMuse } from '../lib/muse'
@@ -17,9 +17,10 @@ function useNow(on: boolean) {
   return now
 }
 
-// The header: one Start/Stop for the three programs, and a clock while they record. What each
-// device does is on its card; here a program only shows up when Start or Stop failed for it.
-export function NightBar() {
+// The header: the tab row (children), one Start/Stop for the three programs, and a clock while
+// they record. What each device does is on its card; here a program only shows up when Start or
+// Stop failed for it.
+export function NightBar({ children }: { children: ReactNode }) {
   const bd = useBand()
   const mu = useMuse()
   const po = usePolar()
@@ -64,6 +65,7 @@ export function NightBar() {
           </span>
         ) : null}
       </div>
+      {children}
       <div className="controls">
         {PROGS.filter((p) => errors[p]).map((p) => (
           <span key={p} className="card-err">

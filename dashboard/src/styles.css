@@ -71,8 +71,8 @@ select:focus-visible {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 14px 0;
+  gap: 0 24px;
+  min-height: 48px;
   background: var(--bg);
   border-bottom: 1px solid var(--line);
 }
@@ -715,15 +715,18 @@ canvas {
 }
 
 /* ---------- tabs ---------- */
+/* in the top bar, as high as the bar: the line under the open tab lies on the bar's own line */
 .tabs {
   display: flex;
+  flex: 1;
+  align-self: stretch;
   gap: 2px;
-  margin-top: 16px;
-  border-bottom: 1px solid var(--line);
+  margin-bottom: -1px;
   overflow-x: auto;
 }
 .tabs button {
-  height: 34px;
+  height: auto;
+  min-height: 48px;
   padding: 0 16px;
   background: transparent;
   border: none;

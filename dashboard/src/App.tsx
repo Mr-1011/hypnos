@@ -102,15 +102,16 @@ export default function App() {
 
   return (
     <div className={tab === 'Live' ? 'app fit' : 'app'}>
-      <NightBar />
+      <NightBar>
+        <nav className="tabs">
+          {TABS.map((t) => (
+            <button key={t} className={t === tab ? 'on' : ''} onClick={() => setTab(t)}>
+              {t}
+            </button>
+          ))}
+        </nav>
+      </NightBar>
       <Cards />
-      <nav className="tabs">
-        {TABS.map((t) => (
-          <button key={t} className={t === tab ? 'on' : ''} onClick={() => setTab(t)}>
-            {t}
-          </button>
-        ))}
-      </nav>
       {tab === 'Live' ? <LiveTab /> : null}
       {tab === 'Band' ? <BandTab /> : null}
       {tab === 'Muse' ? <MuseTab /> : null}
