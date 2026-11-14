@@ -16,6 +16,9 @@ export function Memory({ className = '' }: { className?: string }) {
   const ag = useAgent()
   const brain = ag.state?.brain
   const sense = ag.state?.sense
+  const sl = ag.state?.sleep
+  // agent/sleep.py: scored each half minute. With no Muse on the head it is only stillness and the clock.
+  const asleep = !sl?.stage ? '' : `${sl.cycle && sl.stage !== 'awake' ? `${sl.stage} sleep` : sl.stage}${sl.cycle ? `, cycle ${sl.cycle}, ${sl.asleep_min} min` : ''}${sl.eeg ? '' : ' (no EEG)'}`
   const pos = useRef(new Map<string, P>())
   const [, setFrame] = useState(0)
   const [hot, setHot] = useState<string | null>(null)
@@ -90,8 +93,8 @@ export function Memory({ className = '' }: { className?: string }) {
       className={className}
       tools={
         <span className="hr">
-          {/* the decisions model's guess from words and movement, not a sleep stage */}
-          {sense ? `seems ${sense.state}${sense.worried > 0.6 ? ', worried' : ''}` : nodes.length > 1 ? `${nodes.length - 1} notes and days` : ''}
+          {asleep}
+          {sense && sense.worried > 0.6 ? `${asleep ? ' - ' : ''}sounds worried` : ''}
         </span>
       }
     >
