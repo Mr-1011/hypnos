@@ -25,10 +25,10 @@ not rest (brain.restless). A cue goes to Gemini like a line of the talk, with th
 
 The agent answers what weighs on the person with an earlier time when the same kind of thing went
 well. It finds that with its tools (TOOLS: Voice's methods of those names), in a loop that Pipecat
-runs: recall searches the earlier days, read gives the calendar or the mail, sense asks Google's
-decisions model what the person's words touch, body gives the sensors' numbers, stay_quiet says
-nothing. skills/ holds the steps for a situation, one Markdown file each; they go into the
-instruction. What a tool looked at goes to the page as the state's sense: the Memory card rings it.
+runs: recall searches the earlier days, sense asks Google's decisions model what the person's
+words touch, body gives the sensors' numbers, stay_quiet says nothing. skills/ holds the steps for
+a situation, one Markdown file each; they go into the instruction. What a tool looked at goes to
+the page as the state's sense: the Memory card rings it.
 
     ./run.sh                 starts it with the three sensor programs
 
@@ -105,7 +105,7 @@ VOICE = "aura-2-pandora-en"   # Deepgram calls it smooth, calm, melodic, breathy
 ECHO_S = 0.6                  # the room still holds the agent's voice this long after it stops
 CALM_GAP_S = 120              # no calm words sooner than this after the agent last spoke; a guess, no night behind it
 KEYS = ("DEEPGRAM_API_KEY", "GOOGLE_API_KEY")
-TOOLS = ("recall", "read", "sense", "body", "stay_quiet")  # the agent's tools: Voice's methods of these names
+TOOLS = ("recall", "sense", "body", "stay_quiet")  # the agent's tools: Voice's methods of these names
 NOTE = ("Note: while the agent runs, everything the band's microphone hears is sent over the internet to "
         "Deepgram (deepgram.com), and what is said goes as text to Google and back to Deepgram for the "
         "voice. Tell the people near the band.")
@@ -239,7 +239,7 @@ class Voice(LiveServer):
         # write the notes through the day when days get longer than that.
         system = (HERE / "prompt.md").read_text() + time.strftime("\nToday is %A, %Y-%m-%d. It is %H:%M.\n") + (
             f"\n# Your notes about this person\n\n{brain.notes()}\n# What the band heard today\n\n{brain.day_text(self.day)[-12000:]}"
-            f"\n# What `read` can give you\n\n{', '.join(brain.sources())}\n"
+            + "".join(f"\n# Their {name}\n\n{text}" for name, text in brain.sources().items())
             # shortcut: every skill goes into the instruction whole; give the agent a tool that loads
             # one skill when there are more of them than an instruction should carry.
             + "\n# Your skills\n" + "".join(f"\n## {f.stem}\n\n{f.read_text()}" for f in sorted((HERE / "skills").glob("*.md"))))
@@ -319,15 +319,6 @@ class Voice(LiveServer):
         await params.result_callback("\n".join(
             f"{day} ({(today - datetime.date.fromisoformat(day)).days} days ago) {line}" for day, line in found)
             or "The earlier days hold nothing about that.")
-
-    async def read(self, params, what: str):
-        """Read the person's calendar or mail: what comes tomorrow, and who waits for them.
-
-        Args:
-            what: The name of the source, as your instructions list them: "calendar".
-        """
-        self.touch([what])
-        await params.result_callback(brain.sources().get(what, f"There is no {what}."))
 
     async def sense(self, params):
         """Ask the decisions model about the person's last words: which of your notes, calendar items and
