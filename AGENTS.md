@@ -158,6 +158,9 @@ and ends the loop; the keys are read from `.env` at each start. Its docstring is
   (`Traces`, `Strip`, `Spectrogram`) read the rings in their own animation frames.
 - `src/lib/night.ts`: Start night and Stop night. They fan one command out to the
   three programs under one label.
+- The Live tab is one screen with no page scroll (`.app.fit` in `styles.css`): the numbers, the
+  Transcript and Memory row, and three traces. Only the Transcript and Memory row changes its
+  height. A new panel goes on a device tab, or it replaces one on Live.
 
 ## Conventions
 
