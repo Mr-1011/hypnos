@@ -17,7 +17,7 @@ agent answers aloud).
 cd sensors && ../.venv/bin/python -m unittest test_live_band                                    # all tests
 cd sensors && ../.venv/bin/python -m unittest test_live_band.Gap.test_lost_samples_become_nan   # one test
 
-cd agent && ../.venv/bin/python -m unittest test_brain test_sleep test_voice                    # the agent's tests
+cd agent && ../.venv/bin/python -m unittest test_brain test_sleep                               # the agent's tests
 
 cd dashboard && npx tsc --noEmit    # type check; strict, with noUnusedLocals and noUnusedParameters
 ```
@@ -111,9 +111,10 @@ written.
 `voice.py` is one Pipecat pipeline in its own process, so that nothing in it can hold up a
 recording: the band's sound (`BandInput`, from `/api/audio`) to Deepgram Flux (speech to text and
 the end of a turn), Gemini (`prompt.md` is the system instruction), Deepgram Aura (the voice) and
-the Mac's sound output. It is a `LiveServer` and holds no Bluetooth link. The page has no switch
-for the loop (the user's rule, 2026-11-14): it starts when the band is linked and ends when the
-band is switched off on its card (`watch()`), and `POST /api/talk` does the same by hand. The
+the Mac's sound output. It is a `LiveServer` and holds no Bluetooth link. The Demo switch in
+the page's top bar starts and ends the loop (`POST /api/talk`; the user's rule, 2026-11-14, which
+replaced the start by the band's link). While it is off, nothing listens on `/api/audio`, so the
+band's microphone is off and nothing answers what a person says. The
 keys are read from `.env` at each start. Its docstring is the reference.
 
 - The sound goes to Deepgram and the text to Google: keep `NOTE`, printed before any sound is
@@ -162,8 +163,7 @@ keys are read from `.env` at each start. Its docstring is the reference.
   (`brain.restless()` in `watch()`). A cue carries the body's numbers (`felt()`).
   The numbers (`MOVING_MG`, `WINDOW`, `RESTLESS`, `CALM_GAP_S`) are set for the awake demo: see
   the `shortcut:` comment in `brain.py`.
-- `test_voice.py` covers only the rule that starts and ends the loop. Try the rest of `voice.py`
-  with `sensors/live_band.py --sim` on a spare port and `--band`
+- `voice.py` has no test. Try it with `sensors/live_band.py --sim` on a spare port and `--band`
   set to it. The pretend band always reads as restless (28 mg). The tools have no test: they were
   tried as text, with a made-up past in a scratch brain folder.
 
