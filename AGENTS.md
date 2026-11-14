@@ -131,13 +131,16 @@ keys are read from `.env` at each start. Its docstring is the reference.
   and the day after `prompt.md`; when the loop ends, `brain.reflect()` has Gemini write the notes
   again (`reflect.md` says how).
 - The calendar and the mail are mock data: `brain.sources()` reads the Markdown files in
-  `agent/mock/` (one file is one source), and no real account is connected. They go to the agent
-  through its `read` tool, into the graph (`source` and `item` nodes) and into the questions of
-  `brain.sense()`. Keep the "Mock data" heading of each file, and never present them as the
-  person's real accounts.
+  `agent/mock/` (one file is one source), and no real account is connected. They go into the
+  system prompt, the graph (`source` and `item` nodes) and the questions of `brain.sense()`. Keep
+  the "Mock data" heading of each file, and never present them as the person's real accounts.
+- The weeks before 2026-11-14 are mock data too: `agent/mock/days/` holds made-up days, and
+  `brain.days()` gives them with the real ones (a real day takes the place of a made-up one). The
+  band was worn for one day, and `recall` needs a past. Keep the "Mock data" heading of each
+  file, and never present a made-up day as recorded.
 - The agent is a loop with tools, which Pipecat runs: `TOOLS` in `voice.py` names them, each is a
   method of `Voice`, and its docstring is what the model reads. `recall` searches the earlier days
-  (`brain.recall()`, words and not meaning: see its `shortcut:` comment), `read` gives a source,
+  (`brain.recall()`, words and not meaning: see its `shortcut:` comment),
   `sense` asks Google's decisions model (`brain.sense()`, about 0.5 s: a yes/no question for every
   note and item, and one for worry), `body` gives the sensors' numbers, `stay_quiet` says nothing.
   What a tool looked at goes into the agent's `state` as `sense` (`touch()`), and the Memory card

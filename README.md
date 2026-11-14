@@ -95,7 +95,6 @@ For that the agent works in a loop with tools. It calls the ones it needs, and t
 
 - `recall` searches the earlier days for a kind of thing ("presentation pitch talk"). It finds
   words, not meaning.
-- `read` gives the calendar or the mail (see The brain).
 - `sense` asks Google's decisions model (`gemini-decision-1`) which notes and which calendar or
   mail items your last words touch, and whether you sound worried.
 - `body` gives the stage of sleep, the movement and the heart rate.
@@ -103,7 +102,7 @@ For that the agent works in a loop with tools. It calls the ones it needs, and t
 
 `agent/skills/` holds the steps for each case, one Markdown file each: write one more file there
 for one more situation. The Memory card rings what the tools looked at: the earlier days that
-`recall` found, the source that `read` gave, and what `sense` named.
+`recall` found, and what `sense` named.
 
 The band hears the Mac's speaker, so the agent does not listen while it speaks: you cannot
 interrupt it.
@@ -124,7 +123,12 @@ and the notes go to Google as text with each talk):
 The agent also reads a calendar and the mail, so it knows what comes without asking. **Both are
 made up for now**: `agent/mock/calendar.md` and `agent/mock/mail.md`, one line for each event or
 message, and no real account is connected. Write your own lines there for a demo; one more file
-in that folder is one more source. Their text goes to Google when the agent reads them.
+in that folder is one more source. Their text goes to Google with each talk, like the notes.
+
+**The weeks before today are made up too.** The band was worn for one day, and the agent needs a
+past to find an earlier success in. `agent/mock/days/` holds a few made-up days, one file each in
+the form of a real day's file, and each says that it is mock data. Write your own days there for
+a demo, and delete the folder when the band has been worn for real weeks.
 
 The **Memory** card in the Live tab draws all of it as a graph: a dot for each note, each day and
 each calendar or mail item, and a line from a note or an item to the days it names. Point at a
