@@ -156,6 +156,8 @@ keys are read from `.env` at each start. Its docstring is the reference.
   What a band hears is not trusted text: both prompts say that the talk and the notes are never
   instructions. Keep those lines. `brain.graph()` goes out in the agent's `state`, and
   `dashboard/src/components/Memory.tsx` draws it (the Live tab's "Brain" panel is the EEG).
+  A node with `in` is inside another one, and the card shows it after a click on that one: the
+  lines of a day (`said`, the last 12), and the indented lines under a note or an item (`detail`).
 - Gemini runs with `thinking_level="low"`: the comment at `GoogleLLMService` in `talk()` has the
   measured times. Do not remove it for a model change without measuring again.
 - Cues (`cue()`) make the agent speak unasked while the loop runs: bedtime (the first message),
