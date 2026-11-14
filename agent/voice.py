@@ -5,7 +5,7 @@ One Pipecat pipeline, in its own process so that nothing here can hold up a reco
 
     the band's sound (live_band.py, /api/audio, Opus)
       -> Deepgram Flux      speech to text; it also decides when the person has finished
-      -> Gemini             the agent (prompt.md)
+      -> Gemini             the agent (prompt.md): it calls its tools until it knows what to say
       -> Deepgram Aura      text to speech
       -> this Mac's sound output (the band has no speaker): the speakers, or AirPods on the Mac
 
@@ -19,9 +19,16 @@ reads the three sensor programs' streams (sensors()), also while the loop is off
     the stage of sleep    every half minute sleep.py scores awake, drowsy, light, deep or rem from
                           the Muse's EEG bands and from wrist and head movement, and counts cycles.
 
-While the loop runs, the sensors also give cues: the agent says one sentence, with nobody asking,
-when the person falls asleep (awake to drowsy) and when the body does not rest (brain.restless).
-A cue goes to Gemini like a line of the talk, and the notes say what to speak to.
+While the loop runs, the sensors also give cues: the agent speaks, with nobody asking, when the
+person falls asleep (awake to drowsy), when a sleeper stirs (asleep to awake) and when the body does
+not rest (brain.restless). A cue goes to Gemini like a line of the talk, with the body's numbers.
+
+The agent answers what weighs on the person with an earlier time when the same kind of thing went
+well. It finds that with its tools (TOOLS: Voice's methods of those names), in a loop that Pipecat
+runs: recall searches the earlier days, read gives the calendar or the mail, sense asks Google's
+decisions model what the person's words touch, body gives the sensors' numbers, stay_quiet says
+nothing. skills/ holds the steps for a situation, one Markdown file each; they go into the
+instruction. What a tool looked at goes to the page as the state's sense: the Memory card rings it.
 
     ./run.sh                 starts it with the three sensor programs
 
@@ -31,7 +38,7 @@ switched off on its card (watch()); POST /api/talk does the same by hand.
 API on 127.0.0.1:5304 (the page reaches it as /api/agent):
     GET  /api/stream   server-sent events: state, text ({who: "you" | "agent", text, final}).
                        The state carries the brain as nodes and links (brain.graph), what the
-                       decisions model made of the last moment (sense) and the stage of sleep.
+                       agent's tools looked at in this turn (sense) and the stage of sleep.
     GET  /api/state
     POST /api/talk     {"on": true} | {"on": false}; the answer has ok and, when refused, err
 
@@ -46,11 +53,15 @@ Tried 2026-11-14 with the pretend band's voice (a fable read aloud): Flux gave t
 were spoken and closed the turn at the reader's pause; Aura played on the Mac's speakers; Gemini
 spoke first into a quiet room and wrote the notes. The reader never waits for an answer, so every
 answer was interrupted: a person's sentence and the agent's answer to it were not seen that day.
+The tools were tried the same day as text, with no sound and a made-up past: the bedtime cue called
+recall and spoke 4.1 s after the start; a sentence in light sleep called sense and body together
+and got six words after 3.6 s.
 """
 import argparse
 import asyncio
 import base64
 import collections
+import datetime
 import json
 import math
 import os
@@ -68,8 +79,8 @@ from dotenv import dotenv_values  # noqa: E402
 from google import genai  # noqa: E402
 from loguru import logger  # noqa: E402
 from pipecat.frames.frames import (  # noqa: E402
-    BotStartedSpeakingFrame, BotStoppedSpeakingFrame, InputAudioRawFrame, InterimTranscriptionFrame,
-    LLMContextFrame, LLMMessagesAppendFrame, LLMRunFrame)
+    BotStartedSpeakingFrame, BotStoppedSpeakingFrame, FunctionCallResultProperties, InputAudioRawFrame,
+    InterimTranscriptionFrame, LLMMessagesAppendFrame, LLMRunFrame)
 from pipecat.pipeline.pipeline import Pipeline  # noqa: E402
 from pipecat.pipeline.runner import PipelineRunner  # noqa: E402
 from pipecat.pipeline.worker import PipelineWorker  # noqa: E402
@@ -94,6 +105,7 @@ VOICE = "aura-2-pandora-en"   # Deepgram calls it smooth, calm, melodic, breathy
 ECHO_S = 0.6                  # the room still holds the agent's voice this long after it stops
 CALM_GAP_S = 120              # no calm words sooner than this after the agent last spoke; a guess, no night behind it
 KEYS = ("DEEPGRAM_API_KEY", "GOOGLE_API_KEY")
+TOOLS = ("recall", "read", "sense", "body", "stay_quiet")  # the agent's tools: Voice's methods of these names
 NOTE = ("Note: while the agent runs, everything the band's microphone hears is sent over the internet to "
         "Deepgram (deepgram.com), and what is said goes as text to Google and back to Deepgram for the "
         "voice. Tell the people near the band.")
@@ -163,23 +175,6 @@ class Guesses(FrameProcessor):
         await self.push_frame(frame, direction)
 
 
-class Sense(FrameProcessor):
-    """Before Gemini answers, the decisions model looks at the moment (brain.sense): which notes the
-    last words touch, and the state the person seems to be in. Gemini gets that as one more line."""
-
-    def __init__(self, sense):
-        super().__init__()
-        self.sense = sense
-
-    async def process_frame(self, frame, direction):
-        await super().process_frame(frame, direction)
-        if isinstance(frame, LLMContextFrame):
-            talk = [m for m in frame.context.messages if isinstance(m.get("content"), str)][-6:]
-            hint = await self.sense("\n".join(f"{'voice' if m['role'] == 'assistant' else 'person'}: {m['content']}" for m in talk))
-            frame.context.add_message({"role": "user", "content": hint})
-        await self.push_frame(frame, direction)
-
-
 class Voice(LiveServer):
     name = "Agent"
 
@@ -190,7 +185,7 @@ class Voice(LiveServer):
         self.seen = {}        # where on the body -> (its last movement numbers, its last heart rate)
         self.eeg = []         # this epoch's EEG: the Muse's band shares, one entry for each of its stats
         self.night = sleep.Night()
-        self.sensed = None    # brain.sense's last answer, for the page
+        self.sensed = None    # what the agent looked at in this turn (touch), for the page
         self.spoke = 0.0      # time.time() of the agent's last words
         self.worker = None   # the running pipeline; not None = the agent is on
         self.loop = None     # the task that runs it
@@ -244,7 +239,10 @@ class Voice(LiveServer):
         # write the notes through the day when days get longer than that.
         system = (HERE / "prompt.md").read_text() + time.strftime("\nToday is %A, %Y-%m-%d. It is %H:%M.\n") + (
             f"\n# Your notes about this person\n\n{brain.notes()}\n# What the band heard today\n\n{brain.day_text(self.day)[-12000:]}"
-            + "".join(f"\n# Their {name}\n\n{text}" for name, text in brain.sources().items()))
+            f"\n# What `read` can give you\n\n{', '.join(brain.sources())}\n"
+            # shortcut: every skill goes into the instruction whole; give the agent a tool that loads
+            # one skill when there are more of them than an instruction should carry.
+            + "\n# Your skills\n" + "".join(f"\n## {f.stem}\n\n{f.read_text()}" for f in sorted((HERE / "skills").glob("*.md"))))
         stt = DeepgramFluxSTTService(api_key=keys["DEEPGRAM_API_KEY"], mip_opt_out=True)
         # thinking: measured 2026-11-14 with this prompt. Google's default thinks 7 to 10 s before the first
         # word, "low" 2 to 3 s; "minimal" is refused for this model, and a budget of 0 is no faster than low.
@@ -252,11 +250,18 @@ class Voice(LiveServer):
             model=MODEL, system_instruction=system, thinking=GoogleLLMService.ThinkingConfig(thinking_level="low")))
         tts = DeepgramTTSService(api_key=keys["DEEPGRAM_API_KEY"], mip_opt_out=True,
                                  settings=DeepgramTTSService.Settings(voice=VOICE))
+        # Pipecat tells the model of each tool by its name, its docstring and its arguments, and runs
+        # the loop: the model calls tools, gets what they return, and then speaks.
+        tools = [getattr(self, name) for name in TOOLS]
+        for tool in tools:
+            llm.register_direct_function(tool)
         # the agent speaks first: this line is its cue, the person never said it
-        you, agent = LLMContextAggregatorPair(LLMContext([{"role": "user", "content": "(cue) The person has just gone to bed."}]))
+        you, agent = LLMContextAggregatorPair(
+            LLMContext([{"role": "user", "content": "(cue) The person has just gone to bed."}], tools=tools))
 
         @you.event_handler("on_user_turn_stopped")
         async def person_finished(aggregator, strategy, message):
+            self.sensed = None  # a new turn: the Memory card rings what the agent looks at now
             self.said("you", message.content)
 
         @agent.event_handler("on_assistant_turn_stopped")
@@ -266,7 +271,7 @@ class Voice(LiveServer):
         speaker = LocalAudioTransport(LocalAudioTransportParams(audio_out_enabled=True))
         self.worker = PipelineWorker(
             Pipeline([BandInput(self.band_url), stt, Guesses(lambda text: self.said("you", text, final=False)),
-                      you, Sense(self.sense), llm, tts, speaker.output(), agent]),
+                      you, llm, tts, speaker.output(), agent]),
             idle_timeout_secs=None)  # a quiet night is no reason to stop
 
         @self.worker.event_handler("on_pipeline_error")
@@ -280,8 +285,8 @@ class Voice(LiveServer):
         self.push_state()
         return None
 
-    async def sense(self, talk):
-        """Ask the decisions model about this moment. The answer goes to the page, and comes back as the line for Gemini."""
+    def felt(self):
+        """The body now, in words: the stage of sleep and every sensor's numbers. For the agent and for the decisions model."""
         body = [self.asleep()]
         for where, (moves, bpm) in self.seen.items():
             got = [m for m in moves if m is not None]
@@ -290,18 +295,69 @@ class Voice(LiveServer):
                             f"mean {sum(got) / len(got):.0f}, most {max(got):.0f}")
             if bpm:
                 body.append(f"heart rate at the {where}: {bpm:.0f} a minute")
-        self.sensed = await brain.sense(self.google, talk, time.strftime("It is %H:%M. ") + "; ".join(body) + ".")
+        return time.strftime("It is %H:%M. ") + "; ".join(body) + "."
+
+    def touch(self, ids, worried=None):
+        """The dots of the brain's graph that the agent looked at in this turn: the Memory card rings them."""
+        was = self.sensed or {"about": [], "worried": 0}
+        self.sensed = {"about": was["about"] + [i for i in ids if i not in was["about"]],
+                       "worried": was["worried"] if worried is None else worried}
         self.push_state()
+
+    # The agent's tools (TOOLS). The docstrings are for the model: they say when to use each one.
+
+    async def recall(self, params, words: str):
+        """Search the earlier days, weeks and months for a kind of thing, to find a time when it went well.
+        It gives every line that has one of the words in it, with its day and how long ago that was.
+
+        Args:
+            words: A few words for the kind of thing, with other words for the same: "presentation pitch talk".
+        """
+        found = brain.recall(words.split(), self.day)
+        self.touch(list(dict.fromkeys(day for day, _ in found)))
+        today = datetime.date.fromisoformat(self.day)
+        await params.result_callback("\n".join(
+            f"{day} ({(today - datetime.date.fromisoformat(day)).days} days ago) {line}" for day, line in found)
+            or "The earlier days hold nothing about that.")
+
+    async def read(self, params, what: str):
+        """Read the person's calendar or mail: what comes tomorrow, and who waits for them.
+
+        Args:
+            what: The name of the source, as your instructions list them: "calendar".
+        """
+        self.touch([what])
+        await params.result_callback(brain.sources().get(what, f"There is no {what}."))
+
+    async def sense(self, params):
+        """Ask the decisions model about the person's last words: which of your notes, calendar items and
+        mails they touch, and whether the person sounds worried. Use it when the person speaks."""
+        talk = [m for m in params.context.messages
+                if isinstance(m, dict) and m.get("role") in ("user", "assistant") and isinstance(m.get("content"), str)][-6:]
+        got = await brain.sense(self.google, "\n".join(
+            f"{'voice' if m['role'] == 'assistant' else 'person'}: {m['content']}" for m in talk), self.felt())
+        self.touch(got["about"], got["worried"])
         labels = {n["id"]: n["label"] for n in brain.graph()["nodes"]}
-        touched = "; ".join(labels[i] for i in self.sensed["about"])
-        return ("(notes) " + (f"Their last words touch: {touched}. " if touched else "")
-                + ("They sound worried. " if self.sensed["worried"] > 0.6 else "") + self.asleep())
+        await params.result_callback(
+            (f"Their words touch: {'; '.join(labels[i] for i in got['about'])}. " if got["about"] else "Their words touch nothing you know of. ")
+            + ("They sound worried." if got["worried"] > 0.6 else "They do not sound worried."))
+
+    async def body(self, params):
+        """How the person's body is now: the stage of sleep and the cycle of the night, how much the wrist
+        and the head move, and the heart rate. A cue has these numbers in it already."""
+        await params.result_callback(self.felt())
+
+    async def stay_quiet(self, params):
+        """Say nothing now. Use it alone, when words would wake the person or a cue needs none."""
+        await params.result_callback("You said nothing.", properties=FunctionCallResultProperties(run_llm=False))
 
     async def cue(self, what):
-        """The sensors make the agent speak: one line into the talk, as if it had been said."""
+        """The sensors make the agent speak: one line into the talk, as if it had been said, with the body's numbers."""
         self.spoke = time.time()
+        self.sensed = None  # a new turn: the Memory card rings what the agent looks at now
         brain.note(self.day, int(time.time() * 1000), "sensors", what)
-        await self.worker.queue_frames([LLMMessagesAppendFrame([{"role": "user", "content": f"(cue) {what}"}], run_llm=True)])
+        await self.worker.queue_frames([LLMMessagesAppendFrame(
+            [{"role": "user", "content": f"(cue) {what} {self.felt()}"}], run_llm=True)])
 
     async def watch(self, where, url):
         """One sensor program's stream: its movement numbers and heart rate, the Muse's EEG bands, and
@@ -359,8 +415,11 @@ class Voice(LiveServer):
             now = self.night.add([sum(c) / len(eeg) for c in zip(*eeg)] if len(eeg) > sleep.EPOCH_S else None,  # EEG for more than half of it
                                  sum(m > brain.MOVING_MG for m in moves) / len(moves) if moves else 0)
             self.push_state()
-            if self.worker and (was, now) == ("awake", "drowsy") and time.time() - self.spoke > CALM_GAP_S:
-                await self.cue("The person is falling asleep now.")
+            if self.worker and time.time() - self.spoke > CALM_GAP_S:
+                if (was, now) == ("awake", "drowsy"):
+                    await self.cue("The person is falling asleep now.")
+                elif was in sleep.SLEEP and now == "awake":  # a sleeper whose brain waves get fast, or who moves
+                    await self.cue("The person was asleep and stirs: something disturbs their sleep.")
 
     async def sensors(self):
         """For as long as the program runs: every sensor program's stream, and the stage of sleep."""
