@@ -1003,9 +1003,14 @@ button.on {
   cursor: default;
   transition: opacity 0.15s;
 }
-/* a dot that holds more dots: a click opens it */
-.memory g.more {
+/* a click on a dot brings it near, and opens one that holds more dots */
+.memory .view > g {
   cursor: pointer;
+}
+/* the picture grows about the dot in half a second, and stops with no bounce */
+.memory .view {
+  transform-origin: 0 0;
+  transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 .memory text {
   font-size: 9px;
