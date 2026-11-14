@@ -1,5 +1,5 @@
 #!/bin/bash
-# Hypnos: the three sensor programs, each started again if it exits, and the page.
+# Hypnos: the three sensor programs and the agent, each started again if it exits, and the page.
 #   ./run.sh          then open http://localhost:5300
 #   ./run.sh --sim    the kit's pretend band in place of the real one
 # Ctrl-C ends everything. A program that is restarted mid-night appends to its own recording.
@@ -15,5 +15,6 @@ keep() {
 keep sensors/live_muse.py &
 keep sensors/live_polar.py &
 keep sensors/live_band.py "$@" &
+keep agent/voice.py &
 (cd dashboard && npm run dev) &
 wait
