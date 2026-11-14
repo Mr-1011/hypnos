@@ -3,11 +3,11 @@
 When you sleep, everything sleeps except your ears. Hypnos uses that: a channel where your agent
 and you talk while you fall asleep. Built at VexoHacks, 2026-11-14. A prototype, not a medical device.
 
-This repo so far: the live dashboard for the three sensors.
+This repo so far: the live dashboard for the three sensors, and the band's microphone as text.
 
 | Sensor | What it gives | Program | Port |
 |---|---|---|---|
-| Vexo band (wrist) | acceleration, turning, gestures, steps, battery, signal | `sensors/live_band.py` | 5303 |
+| Vexo band (wrist) | acceleration, turning, gestures, steps, battery, signal, microphone as text | `sensors/live_band.py` | 5303 |
 | Muse S (head) | EEG, band power, PPG, head movement | `sensors/live_muse.py` | 5301 |
 | Polar H10 (chest) | heart rate, R-R, 130 Hz ECG | `sensors/live_polar.py` | 5302 |
 
@@ -48,6 +48,15 @@ until it appears. Switch off unlinks and forgets the device.
 The first link of the Muse and of the Polar takes the first matching device a search finds. Check
 the name on the card: with other straps in the room it can be the wrong one. Switch off and on to
 search again.
+
+## Transcript
+
+The **Microphone** switch in the Live tab turns the band's microphone on and shows what it hears as
+text, while people speak. The sound goes over the internet to Deepgram, a company: tell the people
+near the band first, and switch it off when someone asks. The band's light is solid blue while the
+microphone is on. The text is English (`speech.create()` in `sensors/live_band.py` takes
+`language="de"`). With `./run.sh --sim` the pretend band plays a recording of a person reading a
+fable, so the transcript can be tried with the key and no band. The text is shown, not saved.
 
 ## Record
 

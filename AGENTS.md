@@ -3,7 +3,8 @@
 Guidance for coding agents that work in this repository. `CLAUDE.md` imports this file.
 
 Hypnos is a hackathon prototype (VexoHacks, 2026-11-14): a channel between a person and their agent
-while the person falls asleep. So far the repo holds the live dashboard for three Bluetooth sensors.
+while the person falls asleep. So far the repo holds the live dashboard for three Bluetooth sensors
+and the live transcript of the band's microphone.
 `README.md` covers setup, how to pair each device, and how to record a night.
 
 ## Commands
@@ -21,8 +22,10 @@ cd dashboard && npx tsc --noEmit    # type check; strict, with noUnusedLocals an
 - The page has no lint, build or test script. `npm run dev` (Vite) is the only one.
 - Run the Python tests from `sensors/`: the modules import each other by bare name.
 - `vexo-open-kit/` must be cloned at the repo root (README, Setup). `live_band.py` puts
-  `vexo-open-kit/python` on `sys.path`. The folder is a reference clone that git ignores, with its
-  own `AGENTS.md`: never edit it and never commit it.
+  `vexo-open-kit/python` (the library) and `vexo-open-kit/examples/python` (`speech.py`, the
+  Deepgram client) on `sys.path`. The folder is a reference clone that git ignores, with its own
+  `AGENTS.md`: never edit it and never commit it. Its rules on the band number, the keys and the
+  microphone hold here too.
 - Python packages go into `.venv` with `uv` (`requirements.txt` pins them).
 - macOS only: the recorders start `caffeinate`, and `BleLink.known_device()` uses CoreBluetooth.
 
@@ -61,11 +64,19 @@ library (`vexo_open.Band`) holds the link and reconnects, so `BandLink` override
 `disconnect` and `autoconnect`, and uses `BleLink` only for link state, the event log and the
 remembered switch. It does not run the watchdog.
 
+The band's microphone (`set_mic`, `POST /api/mic`) sends its sound to Deepgram through the kit's
+`speech.py`, which reads `DEEPGRAM_API_KEY` from the environment or from `.env` in the folder the
+program is started in. The sound leaves the Mac, so two lines must stay: the one `speech.py` prints
+before any sound is sent, and the one the page shows while the switch is on
+(`dashboard/src/components/Transcript.tsx`). Deepgram answers on its own thread and the packets go
+out on another (`feed`): nothing of it may block the event loop that records the motion.
+
 Each program's docstring is the reference for its HTTP API, its recording format and the measured
 protocol facts. Read it before changing a decoder.
 
 Message types on every stream, told apart by `t`: `state` (link and recording), `data` (samples,
-20 Hz batches), `stats` (2 Hz), `event` (a log line), `ping`.
+20 Hz batches), `stats` (2 Hz), `event` (a log line), `ping`. The band also sends `text` (what the
+microphone heard: guesses with `final` 0, then the settled line).
 
 Recording rules that span files:
 
