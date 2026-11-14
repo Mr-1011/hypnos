@@ -110,4 +110,5 @@ written.
 - Comments say why, and many carry a measurement with its date. Keep that style, and keep those
   comments when you move code.
 - A known limit is marked `shortcut: <the limit>, <when to upgrade>`.
-- Keys go into `.env`, which git ignores, with `data/`.
+- Keys go into `.env`, which git ignores, with `data/`. `env.example` is the empty form with every
+  key name: add a line there when code starts to read a new key. Never write a key into a file.

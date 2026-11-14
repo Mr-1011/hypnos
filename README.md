@@ -22,7 +22,11 @@ uv venv .venv && uv pip install -p .venv/bin/python -r requirements.txt
 (cd dashboard && npm install)
 ```
 
-Keys go into `.env` (`cp vexo-open-kit/env.example .env`). Git ignores `.env`; never commit a key.
+Keys go into `.env` in this folder (`cp env.example .env`, then write each key after its `=`).
+Git ignores `.env`; never commit a key and never paste one into a chat. The transcript needs
+`DEEPGRAM_API_KEY`. Everything else works with no key. `GOOGLE_API_KEY` and `ELEVENLABS_API_KEY`
+have a line in the form for the agent; nothing reads them yet.
+`.venv/bin/python vexo-open-kit/examples/python/check_keys.py` says whether the keys work.
 
 ## Run
 
