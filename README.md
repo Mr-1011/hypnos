@@ -98,14 +98,19 @@ and the notes go to Google as text with each talk):
   how). You can write into this file by hand; the notes before the last rewrite stay in
   `person.before.md`.
 
-The **Memory** card in the Live tab draws both as a graph: a dot for each note and each day, and a
-line from a note to the days it names. Point at a dot to read it. A hand edit shows after a
-reload of the page.
+The agent also reads a calendar and the mail, so it knows what comes without asking. **Both are
+made up for now**: `agent/mock/calendar.md` and `agent/mock/mail.md`, one line for each event or
+message, and no real account is connected. Write your own lines there for a demo; one more file
+in that folder is one more source. Their text goes to Google with each talk, like the notes.
+
+The **Memory** card in the Live tab draws all of it as a graph: a dot for each note, each day and
+each calendar or mail item, and a line from a note or an item to the days it names. Point at a
+dot to read it. A hand edit shows after a reload of the page.
 
 Before the agent answers, Google's decisions model (`gemini-decision-1`) gets one call with the
-last lines of the talk and the sensors' numbers. It says which notes your words touch, whether
-you sound worried. The agent answers with that in mind, and the Memory card rings the touched
-notes.
+last lines of the talk and the sensors' numbers. It says which notes and which calendar or mail
+items your words touch, and whether you sound worried. The agent answers with that in mind, and
+the Memory card rings what was touched.
 
 ### Sleep
 

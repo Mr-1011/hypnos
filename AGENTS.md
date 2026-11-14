@@ -126,6 +126,10 @@ and ends the loop; the keys are read from `.env` at each start. Its docstring is
   lines, and the talk), and `person.md` is the notes about the person. `talk()` puts the notes
   and the day after `prompt.md`; when the loop ends, `brain.reflect()` has Gemini write the notes
   again (`reflect.md` says how).
+- The calendar and the mail are mock data: `brain.sources()` reads the Markdown files in
+  `agent/mock/` (one file is one source), and no real account is connected. They go into the
+  system prompt, the graph (`source` and `item` nodes) and the questions of `brain.sense()`. Keep
+  the "Mock data" heading of each file, and never present them as the person's real accounts.
 - `sleep.py` scores the stage of sleep each half minute (`epochs()`), from the Muse's band shares
   and from movement, and counts cycles. Its rules were set by hand: read its `shortcut:` comment
   before anyone presents the stage as measured.
