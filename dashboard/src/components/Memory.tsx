@@ -1,11 +1,26 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { useAgent, type BrainNode } from '../lib/agent'
+import { post } from '../lib/sse'
 import { Panel } from './Panel'
 
 const COLOR: Record<BrainNode['kind'], string> = { person: '#f3f4f6', head: '#e0b64d', line: '#c47ad9', day: '#4c9be8', source: '#19d18d', item: '#5fbf9f', said: '#8fbdf0', detail: '#9bd8c2' }
 const NAME: Record<BrainNode['kind'], string> = { person: 'the person', head: 'a part of the notes', line: 'a note', day: 'a day', source: 'connected', item: 'from a connected source', said: 'that day', detail: 'more about it' }
 
 type P = { x: number; y: number; vx: number; vy: number }
+
+// The demo: while it is on, the agent listens through the band's microphone and answers
+// (agent/voice.py, POST /api/talk). While it is off, nothing reacts to what a person says. It is
+// in the Memory card's title line, on Live and on Focus (the user's rule, 2026-11-14).
+function Demo() {
+  const ag = useAgent()
+  const on = !!ag.state?.on
+  return (
+    <label className="demo">
+      Demo
+      <button role="switch" aria-checked={on} aria-label="Demo" className={`switch ${on ? 'on' : ''}`} onClick={() => post('/api/agent', '/api/talk', { on: !on })} disabled={!ag.online} />
+    </label>
+  )
+}
 
 const ZOOM = 1.4 // how much larger the picture is about a dot that was clicked
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
@@ -147,7 +162,12 @@ export function Memory({ className = '', scale = 1, children }: { className?: st
     <Panel
       title="Memory"
       className={className}
-      tools={<span className="hr">{sense && sense.worried > 0.6 ? 'sounds worried' : ''}</span>}
+      tools={
+        <>
+          <span className="hr">{sense && sense.worried > 0.6 ? 'sounds worried' : ''}</span>
+          <Demo />
+        </>
+      }
     >
       <div className="memory">
         <svg ref={svg} viewBox={`0 0 ${W} ${H}`} role="img" aria-label="What the agent remembers about the person, as a graph of notes and days" onClick={() => setZoomed(null)}>

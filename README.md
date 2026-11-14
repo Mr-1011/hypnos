@@ -61,7 +61,7 @@ search again.
 
 The lower part of the **Memory** card in the Live tab shows what the band's microphone hears as
 text, while people speak, and what the agent answers: one line, the newest. The agent listens
-while the **Demo** switch in the top bar is on (see Agent). The sound goes over the internet to Deepgram, a company: tell
+while the **Demo** switch in the Memory card's title line is on (see Agent). The sound goes over the internet to Deepgram, a company: tell
 the people near the band first, and switch the demo off when someone asks. The band's
 light is solid blue while the microphone is on. With `./run.sh --sim` the pretend band plays a
 recording of a person reading a fable, so the transcript can be tried with the keys and no band.
@@ -74,7 +74,7 @@ the band must know that too.
 
 ## Agent
 
-The **Demo** switch in the top bar starts and ends the voice loop. While it is off, the band's
+The **Demo** switch in the Memory card's title line starts and ends the voice loop. While it is off, the band's
 microphone is off and nothing reacts to what you say. The agent
 does not ask how the day was: it knows the day from what the band heard, and speaks from that.
 The band's microphone hears what you say back,

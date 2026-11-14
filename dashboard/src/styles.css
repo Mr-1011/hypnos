@@ -76,13 +76,12 @@ select:focus-visible {
   background: var(--bg);
   border-bottom: 1px solid var(--line);
 }
-/* the Demo switch, at the right end of the top bar */
+/* the Demo switch, in the Memory card's title line */
 .demo {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-left: auto;
-  font-size: 13px;
+  gap: 8px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text-2);
 }
@@ -211,13 +210,14 @@ h1 {
   }
 }
 /* The Focus tab: only the picture and the words (the user's rule, 2026-11-14). The card has no
-   frame and no title, and the words are in the middle, large enough to read from further away. */
+   frame, only its title line with the Demo switch, and the words are in the middle, large enough
+   to read from further away. */
 .focus .panel {
   border: none;
   background: none;
 }
 .focus .panel > header {
-  display: none;
+  border-bottom: none;
 }
 .focus .talk {
   justify-content: center;
@@ -727,9 +727,9 @@ canvas {
 
 /* ---------- tabs ---------- */
 /* in the top bar, as high as the bar: the line under the open tab lies on the bar's own line */
+/* at the right end of the top bar (the user's rule, 2026-11-14) */
 .tabs {
   display: flex;
-  flex: 1;
   align-self: stretch;
   gap: 2px;
   margin-bottom: -1px;

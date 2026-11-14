@@ -112,7 +112,7 @@ written.
 recording: the band's sound (`BandInput`, from `/api/audio`) to Deepgram Flux (speech to text and
 the end of a turn), Gemini (`prompt.md` is the system instruction), Deepgram Flux TTS (the voice: Alexis, speed 0.7) and
 the Mac's sound output. It is a `LiveServer` and holds no Bluetooth link. The Demo switch in
-the page's top bar starts and ends the loop (`POST /api/talk`; the user's rule, 2026-11-14, which
+the Memory card's title line starts and ends the loop (`POST /api/talk`; the user's rule, 2026-11-14, which
 replaced the start by the band's link). While it is off, nothing listens on `/api/audio`, so the
 band's microphone is off and nothing answers what a person says. The
 keys are read from `.env` at each start. Its docstring is the reference.
