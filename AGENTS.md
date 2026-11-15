@@ -17,7 +17,7 @@ agent answers aloud).
 cd sensors && ../.venv/bin/python -m unittest test_live_band                                    # all tests
 cd sensors && ../.venv/bin/python -m unittest test_live_band.Gap.test_lost_samples_become_nan   # one test
 
-cd agent && ../.venv/bin/python -m unittest test_brain test_sleep                               # the agent's tests
+cd agent && ../.venv/bin/python -m unittest test_brain test_sleep test_activity test_voice_activity # agent tests
 
 cd dashboard && npx tsc --noEmit    # type check; strict, with noUnusedLocals and noUnusedParameters
 ```
@@ -110,7 +110,7 @@ written.
 
 `voice.py` is one Pipecat pipeline in its own process, so that nothing in it can hold up a
 recording: the band's sound (`BandInput`, from `/api/audio`) to Deepgram Flux (speech to text and
-the end of a turn), Gemini (`prompt.md` is the system instruction), Deepgram Flux TTS (the voice: Alexis, speed 0.7) and
+the end of a turn), Gemini (`prompt.md` is the system instruction), Deepgram Flux TTS (Alexis, speed 0.7, expressivity -2) and
 the Mac's sound output. It is a `LiveServer` and holds no Bluetooth link. The Demo switch in
 the Memory card's title line starts and ends the loop (`POST /api/talk`; the user's rule, 2026-11-14, which
 replaced the start by the band's link). While it is off, nothing listens on `/api/audio`, so the
@@ -150,13 +150,21 @@ keys are read from `.env` at each start. Its docstring is the reference.
   What a tool looked at goes into the agent's `state` as `sense` (`touch()`), and the Memory card
   rings it. `skills/` holds the steps for a situation, one Markdown file each, and `talk()` puts
   them after `prompt.md`.
-- A spoken sentence gets its memory before Gemini runs (`Fetch` in the pipeline, `Voice.fetch()`):
-  `sense` and `recall` at once, about 0.5 s, as a "(memory)" line with the stage of sleep. Gemini
-  then speaks in one step. Measured 2026-11-14 as text: the first sound 1.1 to 1.6 s after the
-  sentence (4 to 7 s when gemini-4-hydrogen chose the tools itself). A cue still goes through the tools.
+- A spoken sentence gets its memory before Gemini runs (`ContextLookup` in the pipeline,
+  `Voice.fetch()`): `sense` and `recall` at once, about 0.5 s, as "(notes)" with the stage of
+  sleep. Gemini then speaks in one step. Measured 2026-11-14 as text: the first sound 1.1 to 1.6 s
+  after the sentence (4 to 7 s when gemini-4-hydrogen chose the tools itself). A cue still goes
+  through the tools.
+- `activity.py` tracks observable tool calls per turn, including parallel calls and cancellation.
+  `voice.py` sends `activity` in state; Memory shows its status and animates retrieved graph links
+  only while processing. Never label this as private model reasoning or all matches as used evidence.
 - What the agent is for (the user's rule, 2026-11-14): it answers what weighs on the person with
   an earlier time when the same kind of thing went well, in one or two sentences. Two cases: the
-  person speaks in their sleep, and the body shows stress while they say nothing. It must name
+  person speaks in their sleep, and sensor-triggered support for an important upcoming event, including during sleep.
+  Preparation requires the person's stated high stakes and a concrete helpful behavior from their
+  own retrieved words; otherwise use `stay_quiet`. Movement alone does not identify a worry.
+  Sleep replies have at most six words; unknown stage means stay quiet. Bedtime alone is not a trigger.
+  These are prompt-level relevance rules, not a validated estimate of impact. It must name
   only an earlier time that `recall` gave it: keep that line in `prompt.md`.
 - `sleep.py` scores the stage of sleep each half minute (`epochs()`), from the Muse's band shares
   and from movement, and counts cycles. Its rules were set by hand: read its `shortcut:` comment
@@ -174,9 +182,18 @@ keys are read from `.env` at each start. Its docstring is the reference.
   (`brain.restless()` in `watch()`). A cue carries the body's numbers (`felt()`).
   The numbers (`MOVING_MG`, `WINDOW`, `RESTLESS`, `CALM_GAP_S`) are set for the awake demo: see
   the `shortcut:` comment in `brain.py`.
-- `voice.py` has no test. Try it with `sensors/live_band.py --sim` on a spare port and `--band`
-  set to it. The pretend band always reads as restless (28 mg). The tools have no test: they were
-  tried as text, with a made-up past in a scratch brain folder.
+- `test_voice_activity.py` checks recalled statement highlighting and fallback to a day when a
+  statement is outside the graph's last-12 limit. The full voice loop still needs a live check:
+  use `sensors/live_band.py --sim` on a spare port and `--band` set to it. The pretend band always
+  reads as restless (28 mg).
+
+- `ContextLookup` runs `sense` for each settled speech turn before Gemini can respond, in
+  normal and David mode. Follow-up tool calls reuse that turn; the model selects `recall`
+  queries from the conversation and relevant context. No fixed phrase or search sequence.
+- Filming: `voice.py --demo david` (or `run.sh --demo-david`) loads isolated mock facts via
+  `demo.py` into a new `data/demo-david/take-*` folder. The David instruction keeps a worked
+  example, not an exact-answer rule. Wait for speech, skip startup and sensor speech, label
+  the header David demo, and keep actual sleep readings. Normal memory is untouched.
 
 ### Page (`dashboard/`)
 
@@ -204,10 +221,13 @@ keys are read from `.env` at each start. Its docstring is the reference.
   it replaces one on Live.
 - The Memory picture must stay calm (the user's rule, 2026-11-14: it jumped and bounced too much).
   The first picture and a card of a new size are shown at rest, a change of the dots moves slowly,
-  and a click on a dot zooms the picture to it. The comments in `Memory.tsx` have the numbers.
-  A connected source and its items are drawn as the app's mark, not a dot (`SIGN` in `Memory.tsx`,
-  by the source's name: Gmail's, Google Calendar's, Slack's, WhatsApp's and Notion's, the user's
-  rule, 2026-11-14): give a new source its mark there. The data behind a mark stay the made-up files of `agent/mock/`.
+  and a click on a dot zooms the picture to it. Focus also follows retrieved statements with a
+  smooth automatic zoom and a large excerpt (user request, 2026-11-14); clicking takes manual
+  control for the current turn. Moving light points show retrieved connections only.
+  The comments in `Memory.tsx` have the numbers.
+  A connected source and its items use the app's mark (`SIGN` in `Memory.tsx`, by source name):
+  Gmail, Google Calendar, Slack, WhatsApp and Notion. Give new sources their mark there.
+  The data behind these marks stay the fictional files of `agent/mock/`.
 - `src/lib/course.ts` samples every 2 s how much the body moves and how loud it is at the band's
   microphone (the band program's `sound`, which is null while the microphone is off), each from 0
   to 1, the heart rate (the Polar's, or else the Muse's), the agent's stage of sleep and the

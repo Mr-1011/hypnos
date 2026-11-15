@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { useAgent, type BrainNode } from '../lib/agent'
 import { post } from '../lib/sse'
 import { Panel } from './Panel'
 
 const COLOR: Record<BrainNode['kind'], string> = { person: '#f3f4f6', head: '#e0b64d', line: '#c47ad9', day: '#4c9be8', source: '#19d18d', item: '#5fbf9f', said: '#8fbdf0', detail: '#9bd8c2' }
 const NAME: Record<BrainNode['kind'], string> = { person: 'the person', head: 'a part of the notes', line: 'a note', day: 'a day', source: 'connected', item: 'from a connected source', said: 'that day', detail: 'more about it' }
+const TOOL = { sense: 'Checking context', recall: 'Finding memories', body: 'Checking sensors', stay_quiet: 'Staying quiet' }
+const PHASE = { idle: '', processing: 'Preparing response', complete: 'Response ready', quiet: 'Staying quiet', error: 'Interrupted' }
 
 // A connected tool has its mark in place of a dot, and so has each thing that came from it:
 // Gmail's for the mail and Google Calendar's for the calendar, small (the user's rule,
@@ -134,6 +136,24 @@ export function Memory({ className = '', detail = false, children }: { className
   const same = useMemo(() => JSON.stringify(sent), [sent])
   const brain = useMemo(() => sent, [same])
   const sense = ag.state?.sense
+  const activity = ag.state?.activity
+  const processing = ag.online && activity?.phase === 'processing'
+  const running = processing && activity.steps.some((s) => s.status === 'running')
+  const touched = useMemo(() => new Set(ag.online ? sense?.about ?? [] : []), [ag.online, sense])
+  // Keep only the ancestry of actual matches lit, rather than lighting every item of a day.
+  const context = useMemo(() => {
+    const ids = new Set(touched)
+    const hubs = new Set((brain?.nodes ?? []).filter((n) => ['day', 'head', 'source'].includes(n.kind)).map((n) => n.id))
+    for (const node of brain?.nodes ?? []) if (touched.has(node.id) && node.in) ids.add(node.in)
+    for (const [a, b] of brain?.links ?? []) {
+      if (touched.has(a) && hubs.has(b)) ids.add(b)
+      if (touched.has(b) && hubs.has(a)) ids.add(a)
+    }
+    return ids
+  }, [brain, touched])
+  const activeTools = [...new Set(activity?.steps.filter((s) => s.status === 'running').map((s) => TOOL[s.tool]) ?? [])]
+  const status = !ag.online ? 'Offline' : !activity ? '' : running ? activeTools.join(' · ') : PHASE[activity.phase]
+  const history = activity?.steps.map((s) => `${TOOL[s.tool]}: ${s.status}`).join(' · ')
   const pos = useRef(new Map<string, P>())
   // the picture is laid out in the card's own pixels, so the words keep their size in a card of any height
   const svg = useRef<SVGSVGElement>(null)
@@ -151,6 +171,27 @@ export function Memory({ className = '', detail = false, children }: { className
   // A click on a dot brings it near: the picture grows about it. A second click on it, or a click
   // beside the dots, goes back to the whole picture.
   const [zoomed, setZoomed] = useState<string | null>(null)
+  const manualTurn = useRef<number | undefined>(undefined)
+  const lastTurn = useRef<number | undefined>(undefined)
+  const [featured, setFeatured] = useState<string | null>(null)
+  // Follow returned evidence, never invented intermediate thoughts. A manual click takes
+  // control for the rest of this turn; the next turn can follow new evidence again.
+  useEffect(() => {
+    if (!detail) return
+    if (lastTurn.current !== activity?.turn) {
+      lastTurn.current = activity?.turn
+      manualTurn.current = undefined
+      setFeatured(null)
+      setZoomed(null)
+    }
+    if (!processing || manualTurn.current === activity?.turn) return
+    const matches = [...touched].reverse().map((id) => brain?.nodes.find((n) => n.id === id)).filter((n): n is BrainNode => !!n)
+    const match = matches.find((n) => ['said', 'line', 'item', 'detail'].includes(n.kind)) ?? matches[0]
+    if (match) {
+      setFeatured(match.id)
+      setZoomed(match.id)
+    }
+  }, [detail, activity?.turn, processing, touched, brain])
   const holds = useMemo(() => new Set((brain?.nodes ?? []).map((n) => n.in)), [brain])
   const shown = useMemo(() => {
     // a dot inside a closed dot shows when the agent looks at it: the line of a day that recall found
@@ -263,42 +304,53 @@ export function Memory({ className = '', detail = false, children }: { className
   }, [brain, shown, near, sat, W, H])
 
   const nodes = shown.nodes.filter((n) => pos.current.has(n.id))
-  const lit = (id: string) => !hot || id === hot || !!near.get(hot)?.has(id)
+  const lit = (id: string) => hot ? id === hot || !!near.get(hot)?.has(id) : !context.size || context.has(id) || id === 'person'
   const hotNode = nodes.find((n) => n.id === hot)
   // the clicked dot goes to the middle, as far as the picture's edges allow: nothing beside the picture is shown
   const at = zoomed ? pos.current.get(zoomed) : undefined
+  const zoom = detail ? 1.85 : ZOOM
   const PW = W * scale // the picture in pixels
   const PH = H * scale
-  const view = at ? `translate(${clamp(PW / 2 - at.x * scale * ZOOM, PW - PW * ZOOM, 0)}px, ${clamp(PH / 2 - at.y * scale * ZOOM, PH - PH * ZOOM, 0)}px) scale(${ZOOM})` : 'translate(0px, 0px) scale(1)'
+  const view = at ? `translate(${clamp(PW / 2 - at.x * scale * zoom, PW - PW * zoom, 0)}px, ${clamp(PH * 0.42 - at.y * scale * zoom, PH - PH * zoom, 0)}px) scale(${zoom})` : 'translate(0px, 0px) scale(1)'
+  const evidence = detail && ag.online && activity?.phase !== 'idle' ? brain?.nodes.find((n) => n.id === featured) : undefined
+  const evidenceDay = evidence?.in && /^\d{4}-\d{2}-\d{2}$/.test(evidence.in) ? evidence.in : null
   const click = (id: string) => {
+    manualTurn.current = activity?.turn
+    setFeatured(null)
     if (!detail && holds.has(id)) toggle(id) // the detailed picture has every dot open
     setZoomed((z) => (z === id ? null : id))
   }
 
   return (
     <Panel
-      title="Memory"
+      title={ag.state?.demo === 'david' ? 'Memory · David demo' : 'Memory'}
       className={className}
       tools={
         <>
-          <span className="hr">{sense && sense.worried > 0.6 ? 'sounds worried' : ''}</span>
+          <span className={`memory-phase ${processing ? 'active' : ''}`} role="status" title={history}>{processing ? 'Thinking · ' : ''}{status}</span>
           <Demo />
         </>
       }
     >
       <div className="memory">
-        <svg ref={svg} viewBox={`0 0 ${PW} ${PH}`} role="img" aria-label="What the agent remembers about the person, as a graph of notes and days" onClick={() => setZoomed(null)}>
+        <svg ref={svg} viewBox={`0 0 ${PW} ${PH}`} role="img" aria-label="What the agent remembers about the person, as a graph of notes and days" onClick={() => { manualTurn.current = activity?.turn; setZoomed(null); setFeatured(null) }}>
          <g className="view" style={{ transform: view }}>
           {shown.links.map(([a, b]) => {
             const A = pos.current.get(a)
             const B = pos.current.get(b)
-            return A && B ? <line key={`${a}|${b}`} x1={A.x * scale} y1={A.y * scale} x2={B.x * scale} y2={B.y * scale} className={`${sat.has(a) || sat.has(b) ? 'in' : ''} ${hot && (a === hot || b === hot) ? 'hot' : hot ? 'dim' : ''}`} /> : null
+            const retrieved = (context.has(a) && context.has(b)) || (a === 'person' && context.has(b)) || (b === 'person' && context.has(a))
+            return A && B ? <Fragment key={`${a}|${b}`}>
+              <line x1={A.x * scale} y1={A.y * scale} x2={B.x * scale} y2={B.y * scale} className={`${sat.has(a) || sat.has(b) ? 'in' : ''} ${hot ? (a === hot || b === hot ? 'hot' : 'dim') : retrieved ? `retrieved ${processing ? 'active' : ''}` : context.size ? 'dim' : ''}`} />
+              {detail && processing && retrieved ? <circle className="memory-signal" r="2.5" aria-hidden="true">
+                <animateMotion path={`M ${A.x * scale} ${A.y * scale} L ${B.x * scale} ${B.y * scale}`} dur="2.2s" repeatCount="indefinite" />
+              </circle> : null}
+            </Fragment> : null
           })}
           {nodes.map((n) => {
             const q = pos.current.get(n.id)!
             const x = q.x * scale
             const y = q.y * scale
-            const touched = !!sense?.about.includes(n.id)
+            const matched = touched.has(n.id)
             // near counts the dots inside too: a dot that holds much is big, also while it is closed.
             // The detailed picture has small dots: more of them fit, and the lines show
             const links = Math.sqrt(near.get(n.id)?.size ?? 0)
@@ -308,7 +360,7 @@ export function Memory({ className = '', detail = false, children }: { className
             const more = !detail && holds.has(n.id)
             // a satellite has its name only while the pointer or the zoom is on it: a hundred names
             // at once are no picture, and a day's twelve lie on each other
-            const label = !sat.has(n.id) || touched || n.id === hot || n.id === zoomed ? name(n) : ''
+            const label = !sat.has(n.id) || matched || n.id === hot || n.id === zoomed ? name(n) : ''
             return (
               <g
                 key={n.id}
@@ -317,6 +369,7 @@ export function Memory({ className = '', detail = false, children }: { className
                 onMouseLeave={() => setHot(null)}
                 role="button"
                 tabIndex={0}
+                aria-label={n.label}
                 aria-expanded={more ? open.has(n.id) : undefined}
                 onClick={(e) => {
                   e.stopPropagation() // the picture's own click goes back to the whole picture
@@ -325,8 +378,10 @@ export function Memory({ className = '', detail = false, children }: { className
                 onKeyDown={(e: KeyboardEvent<SVGGElement>) => e.key === 'Enter' && click(n.id)}
               >
                 <circle cx={x} cy={y} r={r + 6} fill="transparent" />
-                {/* what the person's last words touch, says the decisions model */}
-                {touched ? <circle className="touched" cx={x} cy={y} r={r + 5} stroke={COLOR[n.kind]} /> : null}
+                {detail && processing && n.kind === 'person' && !touched.size ? <circle className="memory-wait" cx={x} cy={y} r={r + 12} aria-hidden="true" /> : null}
+                <title>{n.label}{matched ? ' — retrieved this turn' : ''}</title>
+                {/* Actual returned matches, not private reasoning or proof of use in the answer. */}
+                {matched ? <circle className={`touched ${processing ? 'active' : ''}`} cx={x} cy={y} r={r + 5} stroke={COLOR[n.kind]} /> : null}
                 {sign ? (
                   <>
                     {/* the card's colour behind the mark: no line runs through it */}
@@ -344,8 +399,14 @@ export function Memory({ className = '', detail = false, children }: { className
           })}
          </g>
         </svg>
-        {/* only when there is something to say: the dot under the pointer, or a program that is down */}
-        {hotNode || !ag.online ? (
+        {evidence ? (
+          <aside className="memory-evidence" aria-label="Retrieved context">
+            <span className="memory-evidence-source">Retrieved {evidence.kind === 'said' || evidence.kind === 'line' ? 'memory' : 'context'}{evidenceDay ? ` · ${evidenceDay}` : ''}</span>
+            <p key={evidence.id}>{evidence.label.replace(/^\d{2}:\d{2}(?::\d{2})?\s+(you|agent|heard):\s*/, '')}</p>
+          </aside>
+        ) : null}
+        {/* Hover keeps the complete text available, including outside an active turn. */}
+        {(hotNode && !evidence) || !ag.online ? (
           <p className="memory-said">
             {hotNode ? (
               <>

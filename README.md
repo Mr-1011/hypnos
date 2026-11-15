@@ -1,5 +1,13 @@
 # Hypnos
 
+<p align="center">
+  <img src="docs/assets/hypnos-caps-logo-dark.png" alt="Hypnos — gold emblem and wordmark on a dark background" width="800" />
+</p>
+
+<p align="center">
+  <img src="docs/assets/hypnos-icon-dark.png" alt="Hypnos icon — gold winged profile on a dark square" width="144" />
+</p>
+
 When you sleep, everything sleeps except your ears. Hypnos uses that: a channel where your agent
 and you talk while you fall asleep. Built at VexoHacks, 2026-11-14. A prototype, not a medical device.
 
@@ -40,6 +48,31 @@ the form; nothing reads it yet.
 ```
 
 Ctrl-C ends everything. `run.sh` starts a program again if it exits.
+
+## Film the David scene
+
+Start the stack with `./run.sh --demo-david` (stop an already running stack first).
+Alternatively, run `.venv/bin/python agent/voice.py --demo david` alongside the sensor programs
+and Vite, with no other agent on port 5304. Use the real band; `--sim` reads a fable and does
+not hear the actor. The usual Deepgram and Google keys are required.
+
+Open **Focus**, link the team's band, then switch **Demo** on. The header says **David demo**.
+The agent waits for speech. Say **“Oh no, I can't”**, **“I'll let them down”**, or speak naturally
+near the band, then pause to end the turn. Every speech turn runs a context lookup before
+Gemini responds, in both normal and David mode. Relevant earlier experiences are searched
+with `recall`; the graph follows the actual returned facts.
+
+The David profile includes a worked example connecting tomorrow's pitch, his worry, Maya's
+confirmed participation and a helpful earlier experience to **“You and Maya are a team.”**
+It is guidance, not a keyword trigger or a forced answer. Other topics can produce other
+searches and responses. STT, retrieval and Alexis are live: rehearse once before filming;
+recognition, selected memories and exact wording depend on the services.
+
+`agent/demo/david/` contains the clearly labeled fictional facts. The pitch date is tomorrow;
+each switch-on creates a fresh take in `data/demo-david/`, separate from `data/brain/` and the
+default mock history. Demo off/on resets for another take. Sensor readings stay real; this
+mode does not fabricate a sleeping stage and does not speak from sensor cues. Restart without
+`--demo david` (or without `--demo-david` in run.sh) to return to the normal agent.
 
 ## Connect the devices
 
@@ -82,14 +115,20 @@ and the agent answers. Both sides
 show in the Transcript panel. The voice plays on the Mac's sound output (the band has no
 speaker): the speakers, or AirPods linked to the Mac.
 
-Deepgram hears (Flux, which also decides when you have finished) and speaks (Flux TTS, the voice Alexis at speed 0.7); Gemini writes
-the answers from `agent/prompt.md`, about 1.5 s after the end of your sentence (measured as text, without the microphone). So the band's sound goes to Deepgram, and what is said goes as
+Deepgram hears (Flux, which also decides when you have finished) and speaks (Flux TTS,
+Alexis in English, speed 0.7, expressivity -2 for calm delivery); Gemini writes
+the answers from `agent/prompt.md`, about 1.5 s after the end of your sentence (measured as
+text, without the microphone). So the band's sound goes to Deepgram, and what is said goes as
 text to Google: tell the people near the band first.
 
 The band is made to be worn for weeks and months, and the agent uses that. When something weighs
-on you at night, it answers with an earlier time when the same kind of thing went well: "Four
-weeks ago your presentation went well. Tomorrow can go the same way." It does that in two cases:
-you speak in your sleep, or you say nothing and the body shows stress (see Sleep).
+on you at night, it answers with a helpful behavior from your own earlier words: "You paused
+and explained one number at a time last time." It does that in two cases:
+you speak in your sleep, or a restlessness cue prompts a brief reminder of a helpful behavior
+for an important upcoming event, including during sleep.
+Unsolicited preparation requires personally stated high stakes and a helpful action in your
+own earlier words; otherwise the agent stays quiet. These are prompt-level rules, not a
+validated prediction of benefit. Movement alone does not identify a worry.
 
 For that the agent works in a loop with tools. It calls the ones it needs, and then it speaks:
 
@@ -105,8 +144,28 @@ For that the agent works in a loop with tools. It calls the ones it needs, and t
 for one more situation. The Memory card rings what the tools looked at: the earlier days that
 `recall` found, and what `sense` named.
 
+The Memory panel also shows live tool activity: checking context, finding memories and
+checking sensors. Returned nodes and their graph connections light up while a response is
+pending; the animation stops at a response, silence, error or disconnect. These are observed
+tool calls and retrieved matches, not private model reasoning or proof that every match was
+used in the answer. Parallel calls appear together. Starting a new turn clears old activity.
+In Focus, a recalled statement lights up with its parent day and their existing connections;
+other statements of the day remain dim. Matches outside the graph's last-12-lines limit light
+up the day instead. Status stays beside the Demo switch, so the graph does not resize between
+steps. Focus follows returned statements with an automatic zoom, moving light points on their
+connections, and a large readable excerpt. A click takes manual control for that turn.
+Completed steps are available in the status tooltip.
+
 The band hears the Mac's speaker, so the agent does not listen while it speaks: you cannot
 interrupt it.
+
+English everyday conversation simulations are in [agent/simulations.md](agent/simulations.md):
+the approved David (sleep speech) and Leah (silent, sensor-triggered) stories. Use them as
+role-play scripts; they are not loaded into the person's memory or mock calendar/mail.
+The dashboard arousal curve itself does not trigger the agent; existing backend restlessness
+cues do. David has an isolated live filming mode (see above); Leah remains a storyboard.
+Neither is an automatic audio replay.
+The replies are examples, not fixed responses from the live model.
 
 ### The brain
 
