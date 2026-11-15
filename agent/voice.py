@@ -309,19 +309,19 @@ class Voice(LiveServer):
 
     # The agent's tools (TOOLS). The docstrings are for the model: they say when to use each one.
 
-    async def recall(self, params, words: str):
-        """Search the earlier days, weeks and months for a kind of thing, to find a time when it went well.
-        It gives every line that has one of the words in it, with its day and how long ago that was.
+    async def recall(self, params, about: str):
+        """Search the earlier days, weeks and months for a time when the same kind of thing went well.
+        It gives the lines that tell of such a time, the surest first, each with its day and how long ago that was.
 
         Args:
-            words: A few words for the kind of thing, with other words for the same: "presentation pitch talk".
+            about: What weighs on the person, in a few words: "afraid of the pitch to the judges tonight".
         """
-        found = brain.recall(words.split(), self.day)
-        self.touch(list(dict.fromkeys(day for day, _ in found)))
+        found = await brain.recall(self.google, about, self.day)
+        self.touch(list(dict.fromkeys(i for day, line in found for i in (day, f"{day}/{line}"))))  # the day and its line
         today = datetime.date.fromisoformat(self.day)
         await params.result_callback("\n".join(
             f"{day} ({(today - datetime.date.fromisoformat(day)).days} days ago) {line}" for day, line in found)
-            or "The earlier days hold nothing about that.")
+            or "The earlier days hold no time when that kind of thing went well.")
 
     async def sense(self, params):
         """Ask the decisions model about the person's last words: which of your notes, calendar items and

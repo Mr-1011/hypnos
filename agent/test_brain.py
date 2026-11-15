@@ -63,14 +63,26 @@ class Brain(unittest.TestCase):
             self.assertEqual(len(inside), 2)  # the bank's line is not indented: it is a dot of its own
             self.assertIn(["mail/from Mum: call me", "mail/from Mum: call me/she waits since Monday"], g["links"])
 
-    def test_recall_finds_the_words_in_the_earlier_days_newest_first(self):
+    def test_recall_asks_about_every_earlier_line_and_gives_the_sure_ones_surest_first(self):
+        asked = []
+
+        async def create(model, input, questions):  # the decisions model: surest of the talk, sure of the pitch, not of lunch
+            asked.append(len(questions))
+            return NS(answers={k: NS(noul=0.9 if "talk" in q["instructions"] else 0.7 if "pitch" in q["instructions"] else 0.1)
+                               for k, q in questions.items()})
+
+        client = NS(aio=NS(decisions=NS(create=create)))
         with tempfile.TemporaryDirectory() as d, mock.patch.object(brain, "DIR", Path(d)):
-            brain.note("2026-10-17", 0, "heard", "The Presentation went really well.")
+            self.assertEqual(asyncio.run(brain.recall(client, "afraid of the pitch", "2026-11-14")), [])
+            self.assertEqual(asked, [])  # no earlier day: nothing to ask
+            brain.note("2026-10-17", 0, "heard", "The pitch went really well.")
             brain.note("2026-10-17", 0, "heard", "Lunch was late.")
-            brain.note("2026-11-02", 0, "you", "A good pitch today.")
-            brain.note("2026-11-14", 0, "you", "The presentation is tomorrow.")  # the day of the talk
-            self.assertEqual([(day, line.split("**: ")[1]) for day, line in brain.recall(["presentation", "pitch"], "2026-11-14")],
-                             [("2026-11-02", "A good pitch today."), ("2026-10-17", "The Presentation went really well.")])
+            brain.note("2026-11-02", 0, "you", "A good talk today.")
+            brain.note("2026-11-14", 0, "you", "The pitch is tomorrow.")  # the day of the talk: not an earlier day
+            got = asyncio.run(brain.recall(client, "afraid of the pitch", "2026-11-14"))
+            self.assertEqual(asked, [3])
+            self.assertEqual([(day, line.split("**: ")[1]) for day, line in got],
+                             [("2026-11-02", "A good talk today."), ("2026-10-17", "The pitch went really well.")])
 
     def test_sense_asks_about_every_note_and_names_the_ones_touched(self):
         asked = {}
