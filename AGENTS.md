@@ -152,8 +152,8 @@ keys are read from `.env` at each start. Its docstring is the reference.
   them after `prompt.md`.
 - A spoken sentence gets its memory before Gemini runs (`Fetch` in the pipeline, `Voice.fetch()`):
   `sense` and `recall` at once, about 0.5 s, as a "(memory)" line with the stage of sleep. Gemini
-  then speaks in one step. Measured 2026-11-14 as text: the first sound 2.1 to 3.0 s after the
-  sentence, 4 to 7 s when Gemini chose the tools itself. A cue still goes through the tools.
+  then speaks in one step. Measured 2026-11-14 as text: the first sound 1.1 to 1.6 s after the
+  sentence (4 to 7 s when gemini-4-hydrogen chose the tools itself). A cue still goes through the tools.
 - What the agent is for (the user's rule, 2026-11-14): it answers what weighs on the person with
   an earlier time when the same kind of thing went well, in one or two sentences. Two cases: the
   person speaks in their sleep, and the body shows stress while they say nothing. It must name
@@ -166,8 +166,9 @@ keys are read from `.env` at each start. Its docstring is the reference.
   `dashboard/src/components/Memory.tsx` draws it (the Live tab's "Brain" panel is the EEG).
   A node with `in` is inside another one, and the card shows it after a click on that one: the
   lines of a day (`said`, the last 12), and the indented lines under a note or an item (`detail`).
-- Gemini runs with `thinking_level="low"`: the comment at `GoogleLLMService` in `talk()` has the
-  measured times. Do not remove it for a model change without measuring again.
+- `MODEL` (`gemini-3.5-flash-lite`, no thinking setting) speaks, and `NOTES` (`gemini-4-hydrogen`)
+  writes the notes after a talk: the comment at `GoogleLLMService` in `talk()` has the measured
+  times to the first words. Do not change the model or its thinking without measuring again.
 - Cues (`cue()`) make the agent speak unasked while the loop runs: bedtime (the first message),
   awake to drowsy and a sleeper who stirs (`epochs()`), and a body that does not rest
   (`brain.restless()` in `watch()`). A cue carries the body's numbers (`felt()`).
