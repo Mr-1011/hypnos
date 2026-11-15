@@ -1062,6 +1062,27 @@ button.on {
   transform-origin: 0 0;
   transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
+.focus .memory .view { transition-duration: 1.25s; }
+.memory-signal { fill: #edc8ff; filter: drop-shadow(0 0 4px #c47ad9); pointer-events: none; }
+.memory-wait { fill: none; stroke: #c47ad9; stroke-width: 1.5; animation: touched 1.8s ease-in-out infinite; }
+.memory-evidence {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(760px, calc(100% - 48px));
+  padding: 16px 24px;
+  border: 1px solid #c47ad940;
+  border-radius: 12px;
+  background: var(--bg);
+  box-shadow: 0 8px 40px #0008;
+  text-align: center;
+  max-height: 25vh;
+  overflow: auto;
+}
+.memory-evidence-source { color: #cda6dc; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+.memory-evidence p { margin: 8px 0 0; font-size: clamp(17px, 1.65vw, 25px); line-height: 1.5; color: var(--text); overflow-wrap: anywhere; animation: memory-reveal 0.45s ease-out; }
+@keyframes memory-reveal { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 .memory text {
   font-size: 9px;
   fill: var(--text-3);
@@ -1107,6 +1128,9 @@ button.on {
 @keyframes memory-link { 50% { stroke-opacity: 0.45; } }
 @media (prefers-reduced-motion: reduce) {
   .memory circle.touched.active, .memory line.retrieved.active, .memory-phase.active::before { animation: none; }
+  .memory-signal, .memory-wait { display: none; }
+  .memory-evidence p { animation: none; }
+  .focus .memory .view { transition: none; }
 }
 .memory g:has(.touched) text {
   fill: var(--text);

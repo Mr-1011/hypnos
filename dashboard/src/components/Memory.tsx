@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { useAgent, type BrainNode } from '../lib/agent'
 import { post } from '../lib/sse'
 import { Panel } from './Panel'
@@ -110,6 +110,27 @@ export function Memory({ className = '', detail = false, children }: { className
   // A click on a dot brings it near: the picture grows about it. A second click on it, or a click
   // beside the dots, goes back to the whole picture.
   const [zoomed, setZoomed] = useState<string | null>(null)
+  const manualTurn = useRef<number | undefined>(undefined)
+  const lastTurn = useRef<number | undefined>(undefined)
+  const [featured, setFeatured] = useState<string | null>(null)
+  // Follow returned evidence, never invented intermediate thoughts. A manual click takes
+  // control for the rest of this turn; the next turn can follow new evidence again.
+  useEffect(() => {
+    if (!detail) return
+    if (lastTurn.current !== activity?.turn) {
+      lastTurn.current = activity?.turn
+      manualTurn.current = undefined
+      setFeatured(null)
+      setZoomed(null)
+    }
+    if (!processing || manualTurn.current === activity?.turn) return
+    const matches = [...touched].reverse().map((id) => brain?.nodes.find((n) => n.id === id)).filter((n): n is BrainNode => !!n)
+    const match = matches.find((n) => ['said', 'line', 'item', 'detail'].includes(n.kind)) ?? matches[0]
+    if (match) {
+      setFeatured(match.id)
+      setZoomed(match.id)
+    }
+  }, [detail, activity?.turn, processing, touched, brain])
   const holds = useMemo(() => new Set((brain?.nodes ?? []).map((n) => n.in)), [brain])
   const shown = useMemo(() => {
     const nodes = (brain?.nodes ?? []).filter((n) => detail || !n.in || open.has(n.in))
@@ -213,10 +234,15 @@ export function Memory({ className = '', detail = false, children }: { className
   const hotNode = nodes.find((n) => n.id === hot)
   // the clicked dot goes to the middle, as far as the picture's edges allow: nothing beside the picture is shown
   const at = zoomed ? pos.current.get(zoomed) : undefined
+  const zoom = detail ? 1.85 : ZOOM
   const PW = W * scale // the picture in pixels
   const PH = H * scale
-  const view = at ? `translate(${clamp(PW / 2 - at.x * scale * ZOOM, PW - PW * ZOOM, 0)}px, ${clamp(PH / 2 - at.y * scale * ZOOM, PH - PH * ZOOM, 0)}px) scale(${ZOOM})` : 'translate(0px, 0px) scale(1)'
+  const view = at ? `translate(${clamp(PW / 2 - at.x * scale * zoom, PW - PW * zoom, 0)}px, ${clamp(PH * 0.42 - at.y * scale * zoom, PH - PH * zoom, 0)}px) scale(${zoom})` : 'translate(0px, 0px) scale(1)'
+  const evidence = detail && ag.online && activity?.phase !== 'idle' ? brain?.nodes.find((n) => n.id === featured) : undefined
+  const evidenceDay = evidence?.in && /^\d{4}-\d{2}-\d{2}$/.test(evidence.in) ? evidence.in : null
   const click = (id: string) => {
+    manualTurn.current = activity?.turn
+    setFeatured(null)
     if (!detail && holds.has(id)) toggle(id) // the detailed picture has every dot open
     setZoomed((z) => (z === id ? null : id))
   }
@@ -227,19 +253,24 @@ export function Memory({ className = '', detail = false, children }: { className
       className={className}
       tools={
         <>
-          <span className={`memory-phase ${processing ? 'active' : ''}`} role="status" title={history}>{status}</span>
+          <span className={`memory-phase ${processing ? 'active' : ''}`} role="status" title={history}>{processing ? 'Thinking · ' : ''}{status}</span>
           <Demo />
         </>
       }
     >
       <div className="memory">
-        <svg ref={svg} viewBox={`0 0 ${PW} ${PH}`} role="img" aria-label="What the agent remembers about the person, as a graph of notes and days" onClick={() => setZoomed(null)}>
+        <svg ref={svg} viewBox={`0 0 ${PW} ${PH}`} role="img" aria-label="What the agent remembers about the person, as a graph of notes and days" onClick={() => { manualTurn.current = activity?.turn; setZoomed(null); setFeatured(null) }}>
          <g className="view" style={{ transform: view }}>
           {shown.links.map(([a, b]) => {
             const A = pos.current.get(a)
             const B = pos.current.get(b)
             const retrieved = (context.has(a) && context.has(b)) || (a === 'person' && context.has(b)) || (b === 'person' && context.has(a))
-            return A && B ? <line key={`${a}|${b}`} x1={A.x * scale} y1={A.y * scale} x2={B.x * scale} y2={B.y * scale} className={`${sat.has(a) || sat.has(b) ? 'in' : ''} ${hot ? (a === hot || b === hot ? 'hot' : 'dim') : retrieved ? `retrieved ${processing ? 'active' : ''}` : context.size ? 'dim' : ''}`} /> : null
+            return A && B ? <Fragment key={`${a}|${b}`}>
+              <line x1={A.x * scale} y1={A.y * scale} x2={B.x * scale} y2={B.y * scale} className={`${sat.has(a) || sat.has(b) ? 'in' : ''} ${hot ? (a === hot || b === hot ? 'hot' : 'dim') : retrieved ? `retrieved ${processing ? 'active' : ''}` : context.size ? 'dim' : ''}`} />
+              {detail && processing && retrieved ? <circle className="memory-signal" r="2.5" aria-hidden="true">
+                <animateMotion path={`M ${A.x * scale} ${A.y * scale} L ${B.x * scale} ${B.y * scale}`} dur="2.2s" repeatCount="indefinite" />
+              </circle> : null}
+            </Fragment> : null
           })}
           {nodes.map((n) => {
             const q = pos.current.get(n.id)!
@@ -273,6 +304,7 @@ export function Memory({ className = '', detail = false, children }: { className
                 onKeyDown={(e: KeyboardEvent<SVGGElement>) => e.key === 'Enter' && click(n.id)}
               >
                 <circle cx={x} cy={y} r={r + 6} fill="transparent" />
+                {detail && processing && n.kind === 'person' && !touched.size ? <circle className="memory-wait" cx={x} cy={y} r={r + 12} aria-hidden="true" /> : null}
                 <title>{n.label}{matched ? ' — retrieved this turn' : ''}</title>
                 {/* Actual returned matches, not private reasoning or proof of use in the answer. */}
                 {matched ? <circle className={`touched ${processing ? 'active' : ''}`} cx={x} cy={y} r={r + 5} stroke={COLOR[n.kind]} /> : null}
@@ -293,8 +325,14 @@ export function Memory({ className = '', detail = false, children }: { className
           })}
          </g>
         </svg>
-        {/* only when there is something to say: the dot under the pointer, or a program that is down */}
-        {hotNode || !ag.online ? (
+        {evidence ? (
+          <aside className="memory-evidence" aria-label="Retrieved context">
+            <span className="memory-evidence-source">Retrieved {evidence.kind === 'said' || evidence.kind === 'line' ? 'memory' : 'context'}{evidenceDay ? ` · ${evidenceDay}` : ''}</span>
+            <p key={evidence.id}>{evidence.label.replace(/^\d{2}:\d{2}(?::\d{2})?\s+(you|agent|heard):\s*/, '')}</p>
+          </aside>
+        ) : null}
+        {/* Hover keeps the complete text available, including outside an active turn. */}
+        {(hotNode && !evidence) || !ag.online ? (
           <p className="memory-said">
             {hotNode ? (
               <>

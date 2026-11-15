@@ -126,7 +126,9 @@ used in the answer. Parallel calls appear together. Starting a new turn clears o
 In Focus, a recalled statement lights up with its parent day and their existing connections;
 other statements of the day remain dim. Matches outside the graph's last-12-lines limit light
 up the day instead. Status stays beside the Demo switch, so the graph does not resize between
-steps. Zoom remains manual. Completed steps are available in the status tooltip.
+steps. Focus follows returned statements with an automatic zoom, moving light points on their
+connections, and a large readable excerpt. A click takes manual control for that turn.
+Completed steps are available in the status tooltip.
 
 The band hears the Mac's speaker, so the agent does not listen while it speaks: you cannot
 interrupt it.

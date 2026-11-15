@@ -203,7 +203,10 @@ keys are read from `.env` at each start. Its docstring is the reference.
   it replaces one on Live.
 - The Memory picture must stay calm (the user's rule, 2026-11-14: it jumped and bounced too much).
   The first picture and a card of a new size are shown at rest, a change of the dots moves slowly,
-  and a click on a dot zooms the picture to it. The comments in `Memory.tsx` have the numbers.
+  and a click on a dot zooms the picture to it. Focus also follows retrieved statements with a
+  smooth automatic zoom and a large excerpt (user request, 2026-11-14); clicking takes manual
+  control for the current turn. Moving light points show retrieved connections only.
+  The comments in `Memory.tsx` have the numbers.
   A connected source and its items are drawn as a sign, not a dot (`SIGN` in `Memory.tsx`, by the
   source's name): give a new source its sign there.
 - `src/lib/course.ts` samples every 2 s how much the body moves and how loud it is at the band's
