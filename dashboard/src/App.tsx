@@ -106,7 +106,7 @@ export default function App() {
     <div className={tab === 'Debug' ? 'app' : 'app fit'}>
       <header className="top">
         <div className="brand">
-          <img className="mark" src="/logo.svg" width={28} height={28} alt="" />
+          <img className="mark" src="/mark.png" width={34} height={34} alt="" />
           <h1>Hypnos</h1>
         </div>
         <nav className="tabs">

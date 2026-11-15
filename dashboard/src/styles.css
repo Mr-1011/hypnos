@@ -613,6 +613,9 @@ canvas {
 }
 
 /* ---------- header ---------- */
+/* Julia's emblem (docs/assets/hypnos-icon-dark.png). public/mark.png is its gold lines with no
+   background: with its dark square the emblem was a grey box in this bar. public/icon.png, the
+   favicon, keeps the square. */
 .mark {
   display: block;
 }
