@@ -123,8 +123,8 @@ and the notes go to Google as text with each talk):
 
 The agent also reads a calendar, the mail, Slack, WhatsApp and Notion, so it knows what comes
 without asking. **All of them are made up for now**: the files in `agent/mock/`, one line for each
-event or message, and no real account is connected. The three apps have two lines each: most of
-what the agent knows comes from what the band heard. Write your own lines there for a demo; one more file
+event or message, and no real account is connected. Every file is short, and the three apps have
+one line each: most of what the agent knows comes from what the band heard. Write your own lines there for a demo; one more file
 in that folder is one more source. Their text goes to Google with each talk, like the notes.
 
 **The weeks before today are made up too.** The band was worn for one day, and the agent needs a

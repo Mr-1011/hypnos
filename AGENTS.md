@@ -132,8 +132,9 @@ keys are read from `.env` at each start. Its docstring is the reference.
   again (`reflect.md` says how).
 - The calendar, the mail, Slack, WhatsApp and Notion are mock data: `brain.sources()` reads the
   Markdown files in `agent/mock/` (one file is one source, and the file's name is the name the
-  page and the prompt show), and no real account is connected. Keep the three apps at a few items
-  each (the user's rule, 2026-11-14): most of what the agent knows comes from what the band heard. They go into the
+  page and the prompt show), and no real account is connected. Keep every file short (the
+  user's rule, 2026-11-14: 16 items were too much, 9 stayed, one for each of the three apps): most
+  of what the agent knows comes from what the band heard. They go into the
   system prompt, the graph (`source` and `item` nodes) and the questions of `brain.sense()`. Keep
   the "Mock data" heading of each file, and never present them as the person's real accounts.
 - The weeks before 2026-11-14 are mock data too: `agent/mock/days/` holds made-up days, and
