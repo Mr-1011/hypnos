@@ -89,7 +89,7 @@ function Demo() {
   return (
     <label className="demo">
       Demo
-      <button role="switch" aria-checked={on} aria-label="Demo" className={`switch ${on ? 'on' : ''}`} onClick={() => post('/api/agent', '/api/talk', { on: !on })} disabled={!ag.online} />
+      <button role="switch" aria-checked={on} aria-label="Demo" className={`switch ${on ? 'on' : ''}`} onClick={() => post('/api/agent', '/talk', { on: !on })} disabled={!ag.online} />
     </label>
   )
 }
