@@ -66,8 +66,8 @@ def days():
 
 def sources():
     """What the agent is connected to besides the band, as {name: a Markdown list}.
-    shortcut: made-up files in agent/mock/ (calendar.md, mail.md; one more file is one more source),
-    replace them with the person's real calendar and mail when there is a login for those."""
+    shortcut: made-up files in agent/mock/ (one file is one source, and its name is the source's),
+    replace them with the person's real accounts when there is a login for those."""
     return {f.stem: f.read_text() for f in sorted((HERE / "mock").glob("*.md"))}
 
 

@@ -324,8 +324,8 @@ class Voice(LiveServer):
             or "The earlier days hold no time when that kind of thing went well.")
 
     async def sense(self, params):
-        """Ask the decisions model about the person's last words: which of your notes, calendar items and
-        mails they touch, and whether the person sounds worried. Use it when the person speaks."""
+        """Ask the decisions model about the person's last words: which of your notes and which items of
+        the connected tools they touch, and whether the person sounds worried. Use it when the person speaks."""
         talk = [m for m in params.context.messages
                 if isinstance(m, dict) and m.get("role") in ("user", "assistant") and isinstance(m.get("content"), str)][-6:]
         got = await brain.sense(self.google, "\n".join(

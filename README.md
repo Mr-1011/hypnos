@@ -95,8 +95,8 @@ For that the agent works in a loop with tools. It calls the ones it needs, and t
 
 - `recall` searches the earlier days for a kind of thing ("presentation pitch talk"). It finds
   words, not meaning.
-- `sense` asks Google's decisions model (`gemini-decision-1`) which notes and which calendar or
-  mail items your last words touch, and whether you sound worried.
+- `sense` asks Google's decisions model (`gemini-decision-1`) which notes and which items of the
+  connected tools your last words touch, and whether you sound worried.
 - `body` gives the stage of sleep, the movement and the heart rate.
 - `stay_quiet` says nothing, for a sleeper whom words would wake.
 
@@ -120,9 +120,10 @@ and the notes go to Google as text with each talk):
   how). You can write into this file by hand; the notes before the last rewrite stay in
   `person.before.md`.
 
-The agent also reads a calendar and the mail, so it knows what comes without asking. **Both are
-made up for now**: `agent/mock/calendar.md` and `agent/mock/mail.md`, one line for each event or
-message, and no real account is connected. Write your own lines there for a demo; one more file
+The agent also reads a calendar, the mail, Slack, WhatsApp and Notion, so it knows what comes
+without asking. **All of them are made up for now**: the files in `agent/mock/`, one line for each
+event or message, and no real account is connected. The three apps have two lines each: most of
+what the agent knows comes from what the band heard. Write your own lines there for a demo; one more file
 in that folder is one more source. Their text goes to Google with each talk, like the notes.
 
 **The weeks before today are made up too.** The band was worn for one day, and the agent needs a
@@ -133,8 +134,8 @@ a demo, and delete the folder when the band has been worn for real weeks.
 The **Memory** card in the Live tab draws all of it as a graph: a dot for each note, each day and
 each calendar or mail item, and a line from a note or an item to the days it names. Point at a
 dot to read it. A connected tool and what came from it have a small mark in place of the dot:
-Gmail's for the mail, Google Calendar's for the calendar. A mark says what kind of tool it is, and
-the data behind it stay made up. A click on a dot brings it near: the picture grows about it, and
+Gmail's for the mail, Google Calendar's for the calendar, and Slack's, WhatsApp's and Notion's
+own. A mark says what kind of tool it is, and the data behind it stay made up. A click on a dot brings it near: the picture grows about it, and
 a second click, or a click beside the dots, goes back. A hand edit shows after a reload of the page.
 
 ### Sleep
