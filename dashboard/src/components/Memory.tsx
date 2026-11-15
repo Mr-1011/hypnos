@@ -195,6 +195,12 @@ export function Memory({ className = '', detail = false, children }: { className
     let raf = 0
     const ps = shown.nodes.map((n) => p.get(n.id)!)
     const push = shown.nodes.map((n) => (sat.has(n.id) ? 0.2 : 1))
+    // A name is wide and low, so two dots at one height need more room than the push gives them.
+    // half: half the width of a dot's name (a letter is about 6.6 px wide), 0 for one with no name.
+    // tall: a dot and the name under it. Measured 2026-11-14 with five sources: 1 to 3 names of the
+    // Live card lay on another name or on a mark at each of three window sizes, and none after.
+    const half = shown.nodes.map((n) => (sat.has(n.id) ? 0 : Math.max(12, name(n).length * 3.3) / scale))
+    const tall = 30 / scale
     const tick = () => {
       for (let i = 0; i < ps.length; i++) {
         for (let j = i + 1; j < ps.length; j++) {
@@ -206,6 +212,12 @@ export function Memory({ className = '', detail = false, children }: { className
           ps[i].vy += dy * f
           ps[j].vx -= dx * f
           ps[j].vy -= dy * f
+          // two names on each other, or a name on a dot: the upper one goes up and the lower one down
+          const over = half[i] && half[j] ? Math.min(half[i] + half[j] - Math.abs(dx), tall - Math.abs(dy)) : 0
+          if (over > 0) {
+            ps[i].vy += 0.5 * over * (dy < 0 ? -1 : 1)
+            ps[j].vy -= 0.5 * over * (dy < 0 ? -1 : 1)
+          }
         }
       }
       for (const [a, b] of shown.links) {
