@@ -17,7 +17,7 @@ agent answers aloud).
 cd sensors && ../.venv/bin/python -m unittest test_live_band test_live_server                   # all tests
 cd sensors && ../.venv/bin/python -m unittest test_live_band.Gap.test_lost_samples_become_nan   # one test
 
-cd agent && ../.venv/bin/python -m unittest test_brain test_sleep test_activity test_voice_activity # agent tests
+cd agent && ../.venv/bin/python -m unittest test_brain test_sleep test_activity test_voice_activity test_demo # agent tests
 
 cd dashboard && npx tsc --noEmit    # type check; strict, with noUnusedLocals and noUnusedParameters
 ```
@@ -199,6 +199,10 @@ keys are read from `.env` at each start. Its docstring is the reference.
   `demo.py` into a new `data/demo-david/take-*` folder. The David instruction keeps a worked
   example, not an exact-answer rule. Wait for speech, skip startup and sensor speech, label
   the header David demo, and keep actual sleep readings. Normal memory is untouched.
+  The template `agent/demo/david/` also holds more of David's world, so that the Memory picture
+  is full (the user's rule, 2026-11-14): `days/<n>.md` is the day n days before today, and
+  `sources/` his other tools. Only the line with Maya may tell of a time that went well: `recall`
+  must find that one alone. Ask the decisions model again after a change of those lines.
 
 ### Page (`dashboard/`)
 
