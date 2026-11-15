@@ -57,11 +57,16 @@ and Vite, with no other agent on port 5304. Use the real band; `--sim` reads a f
 not hear the actor. The usual Deepgram and Google keys are required.
 
 Open **Focus**, link the team's band, then switch **Demo** on. The header says **David demo**.
-The agent waits silently. Say **“Oh no, I can't”** clearly near the band, then pause to end
-the turn. Gemini is instructed to retrieve the upcoming pitch, David's worry, Maya's current
-participation, and his earlier helpful experience in order, then say **“You and Maya are a team.”**
-The graph follows actual returned facts. These are live STT/model/TTS calls, not a fixed audio
-replay: rehearse once before filming; recognition, tool ordering and exact wording are not guaranteed.
+The agent waits for speech. Say **“Oh no, I can't”**, **“I'll let them down”**, or speak naturally
+near the band, then pause to end the turn. Every speech turn runs a context lookup before
+Gemini responds, in both normal and David mode. Relevant earlier experiences are searched
+with `recall`; the graph follows the actual returned facts.
+
+The David profile includes a worked example connecting tomorrow's pitch, his worry, Maya's
+confirmed participation and a helpful earlier experience to **“You and Maya are a team.”**
+It is guidance, not a keyword trigger or a forced answer. Other topics can produce other
+searches and responses. STT, retrieval and Alexis are live: rehearse once before filming;
+recognition, selected memories and exact wording depend on the services.
 
 `agent/demo/david/` contains the clearly labeled fictional facts. The pitch date is tomorrow;
 each switch-on creates a fresh take in `data/demo-david/`, separate from `data/brain/` and the

@@ -8,9 +8,10 @@ scene. Label the sleep scenes as simulated. Use Alexis, speed 0.7, expressivity 
 
 This document is the storyboard, not an automatic audio replay. David now has a live filming
 mode: `./run.sh --demo-david`, or `agent/voice.py --demo david` with the other services running.
-It loads isolated mock memories from `agent/demo/david/`. Turn Demo on, say "Oh no, I can't"
-near the real band, then pause. Actual STT, Gemini retrieval calls and Alexis produce the scene;
-rehearse first, because a model instruction cannot guarantee exact wording or ordering.
+It loads isolated mock memories from `agent/demo/david/`. Turn Demo on and speak naturally near the real band, then pause.
+"Oh no, I can't" is one example, not a special trigger. Context lookup runs for every speech
+turn in both modes; Gemini chooses further memory searches and its response. Actual STT,
+retrieval and Alexis produce the scene; rehearse first, since wording and ordering can vary.
 Leah remains a storyboard. Never combine David and Leah in the same live brain.
 
 ## 1. David — reactive reassurance

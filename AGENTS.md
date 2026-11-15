@@ -177,11 +177,13 @@ keys are read from `.env` at each start. Its docstring is the reference.
   use `sensors/live_band.py --sim` on a spare port and `--band` set to it. The pretend band always
   reads as restless (28 mg).
 
+- `ContextLookup` runs `sense` for each settled speech turn before Gemini can respond, in
+  normal and David mode. Follow-up tool calls reuse that turn; the model selects `recall`
+  queries from the conversation and relevant context. No fixed phrase or search sequence.
 - Filming: `voice.py --demo david` (or `run.sh --demo-david`) loads isolated mock facts via
-  `demo.py` into a new `data/demo-david/take-*` folder. `demo_context` returns real graph nodes
-  for the scripted context topics; Gemini still chooses/calls the tools and generates the answer.
-  Wait for the actor's phrase, skip startup and sensor speech, label the header David demo, and
-  keep actual sleep readings. No effect or exact model output is guaranteed. Normal memory is untouched.
+  `demo.py` into a new `data/demo-david/take-*` folder. The David instruction keeps a worked
+  example, not an exact-answer rule. Wait for speech, skip startup and sensor speech, label
+  the header David demo, and keep actual sleep readings. Normal memory is untouched.
 
 ### Page (`dashboard/`)
 

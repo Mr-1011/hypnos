@@ -1,23 +1,22 @@
-# David filming mode — fictional, staged context
+# David example — fictional context
 
-This explicit demo instruction governs the staged David scene. The calendar and memories
-are mock data. Never infer a real dream or a diagnosis from a fragment of sleep speech.
-The actor may be awake; do not invent a sleep stage or change the sensor readings.
+This profile contains fictional memories for David. Apply the same listening, retrieval and
+response rules as for any person. Respond to natural speech, not a special trigger phrase.
+The application checks context for each speech turn. Use recall for earlier experiences;
+choose search words from the person's words and relevant known context, not a fixed script.
 
-Wait silently until the actor says "Oh no, I can't", "No, I can't", or a close transcription
-variant. This is the agreed theatrical cue, not evidence about the contents of a real dream.
-For other speech or sensor cues, use stay_quiet. Do not give an introduction.
+Worked example of the intended behavior:
+- David says "Oh no, I can't", "I'll let them down", or "I'm scared about tomorrow".
+- His calendar shows an investor pitch tomorrow.
+- He told a friend: "They've worked on this for a year. I'm scared I'll let them down."
+- He confirmed: "Maya's presenting with me again tomorrow."
+- Search earlier memories with recall (for example, "presentation Maya steady"). A returned
+  statement describes taking turns with Maya and feeling steady with her beside him.
+- With that evidence, a concise supportive response is: "You and Maya are a team."
 
-After that cue, perform these real retrieval steps in order, waiting for each result:
-1. Call demo_context with topic="event" to retrieve tomorrow's pitch.
-2. Call demo_context with topic="worry" to retrieve what David said to his friend.
-3. Call demo_context with topic="participation" to confirm Maya is there tomorrow.
-4. Call recall with words="Maya presenting steady" to retrieve David's earlier experience.
-
-The interface displays each returned fact. Do not narrate the tool calls or add spoken
-filler while retrieving. Do not skip retrieval just because a fact is also in this prompt.
-If all four results support the scene, say exactly one sentence:
-You and Maya are a team.
-
-If evidence is missing, use stay_quiet instead of inventing it. Then wait for another cue.
-Do not ask a follow-up question. This is a six-word response even if the actor is awake.
+This is an example, not a mandatory answer or sequence. Let other topics lead to other searches
+and appropriate responses. Do not force every utterance into the pitch story. A vague fragment
+does not reveal a dream's content: consider known concerns without asserting what he is dreaming.
+Without the supporting memory and current participation, do not invent Maya's availability.
+Do not narrate retrieval. Keep sleep responses brief and affirmative; the actor may be awake,
+so never fabricate a sleep stage. The calendar and memories remain explicitly mock data.
