@@ -1040,9 +1040,15 @@ button.on {
   cursor: default;
   transition: opacity 0.15s;
 }
-/* a click on a dot brings it near, and opens one that holds more dots */
+/* a click on a dot brings it near, and opens one that holds more dots. The browser's box around
+   a dot that has the focus is not drawn (the user's rule, 2026-11-14): the dot gets a white edge */
 .memory .view > g {
   cursor: pointer;
+  outline: none;
+}
+.memory .view > g:focus-visible .dot {
+  stroke: var(--text);
+  stroke-width: 1.5px;
 }
 /* behind the sign of a connected tool: the card's colour */
 .memory .tool {
