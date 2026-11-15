@@ -141,8 +141,9 @@ keys are read from `.env` at each start. Its docstring is the reference.
   band was worn for one day, and `recall` needs a past. Keep the "Mock data" heading of each
   file, and never present a made-up day as recorded.
 - The agent is a loop with tools, which Pipecat runs: `TOOLS` in `voice.py` names them, each is a
-  method of `Voice`, and its docstring is what the model reads. `recall` searches the earlier days
-  (`brain.recall()`, words and not meaning: see its `shortcut:` comment),
+  method of `Voice`, and its docstring is what the model reads. `recall` asks Google's decisions
+  model about every line of the earlier days (`brain.recall()`, about 0.5 s: does the line tell
+  that the same kind of thing went well; meaning and not words, see its `shortcut:` comment),
   `sense` asks Google's decisions model (`brain.sense()`, about 0.5 s: a yes/no question for every
   note and item, and one for worry), `body` gives the sensors' numbers, `stay_quiet` says nothing.
   What a tool looked at goes into the agent's `state` as `sense` (`touch()`), and the Memory card

@@ -93,8 +93,9 @@ you speak in your sleep, or you say nothing and the body shows stress (see Sleep
 
 For that the agent works in a loop with tools. It calls the ones it needs, and then it speaks:
 
-- `recall` searches the earlier days for a kind of thing ("presentation pitch talk"). It finds
-  words, not meaning.
+- `recall` asks Google's decisions model about every line of the earlier days: does it tell that
+  the same kind of thing went well. It finds meaning, not words: "scared of the presentation"
+  finds "The pitch went really well".
 - `sense` asks Google's decisions model (`gemini-decision-1`) which notes and which items of the
   connected tools your last words touch, and whether you sound worried.
 - `body` gives the stage of sleep, the movement and the heart rate.
