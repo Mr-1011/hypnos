@@ -196,6 +196,7 @@ class BleLink(LiveServer):
 
     PREFIX = "dev"
     QUIET_S = 12
+    SERVICE = None  # a service only this kind of device has: held_device() asks macOS for it
 
     def __init__(self):
         super().__init__()
@@ -299,20 +300,42 @@ class BleLink(LiveServer):
         if sys.platform != "darwin":
             return None
         from Foundation import NSArray, NSUUID
-        from bleak.backends.corebluetooth.CentralManagerDelegate import CentralManagerDelegate
         from bleak.backends.device import BLEDevice
+
+        cbm = await self.central()
+        ident = NSUUID.alloc().initWithUUIDString_(address)
+        if ident is None:
+            return None
+        found = cbm.central_manager.retrievePeripheralsWithIdentifiers_(NSArray.arrayWithObject_(ident))
+        if not found:
+            return None
+        return BLEDevice(address, found[0].name(), (found[0], cbm))
+
+    async def central(self):
+        """CoreBluetooth's own manager, made once: known_device() and held_device() ask it."""
+        from bleak.backends.corebluetooth.CentralManagerDelegate import CentralManagerDelegate
 
         if self.cbm is None:
             cbm = CentralManagerDelegate()
             await cbm.wait_until_ready()
             self.cbm = cbm
-        ident = NSUUID.alloc().initWithUUIDString_(address)
-        if ident is None:
+        return self.cbm
+
+    async def held_device(self):
+        """A device of ours that macOS holds linked, as {"address", "name"}, without a scan. A linked
+        device does not advertise, so a scan never finds it: on 2026-11-14 the Muse had been
+        switched off on its card, which forgets it, system_profiler said Connected, and
+        autoconnect() said "nothing found" until its address was posted by hand."""
+        if sys.platform != "darwin" or not self.SERVICE:
             return None
-        found = self.cbm.central_manager.retrievePeripheralsWithIdentifiers_(NSArray.arrayWithObject_(ident))
-        if not found:
-            return None
-        return BLEDevice(address, found[0].name(), (found[0], self.cbm))
+        from CoreBluetooth import CBUUID
+        from Foundation import NSArray
+
+        cbm = await self.central()
+        held = cbm.central_manager.retrieveConnectedPeripheralsWithServices_(
+            NSArray.arrayWithObject_(CBUUID.UUIDWithString_(self.SERVICE)))
+        return next(({"address": p.identifier().UUIDString(), "name": p.name()}
+                     for p in held if self.match(p.name() or "")), None)
 
     async def connect_once(self, address):
         from bleak import BleakClient, BleakScanner
@@ -435,11 +458,12 @@ class BleLink(LiveServer):
             self.ensure_link()
 
     async def autoconnect(self):
-        """The switch on a card of the page: the remembered device, else the strongest one a scan finds."""
+        """The switch on a card of the page: the remembered device, else one that macOS holds linked,
+        else the first one a scan finds."""
         if self.want:
             self.ensure_link()
             return {"ok": 1, "address": self.want}
-        r = self.remembered()
+        r = self.remembered() or await self.held_device()
         if not r:
             from bleak import BleakScanner
 

@@ -158,6 +158,7 @@ class PolarRecorder:
 
 class Polar(BleLink):
     PREFIX = "polar"
+    SERVICE = "180D"  # heart rate
     name = "Polar"
 
     def __init__(self):

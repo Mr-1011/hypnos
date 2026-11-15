@@ -191,6 +191,7 @@ class Recorder:
 
 class Muse(BleLink):
     PREFIX = "muse"
+    SERVICE = "FE8D"  # the Muse's own service; its bootloader has it too (seen 2026-11-14)
     name = "Muse"
 
     def __init__(self):

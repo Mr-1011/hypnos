@@ -14,7 +14,7 @@ agent answers aloud).
 ./run.sh                 # the three sensor programs, the agent and the page: http://localhost:5300
 ./run.sh --sim           # the kit's pretend band, no hardware (only the band has one)
 
-cd sensors && ../.venv/bin/python -m unittest test_live_band                                    # all tests
+cd sensors && ../.venv/bin/python -m unittest test_live_band test_live_server                   # all tests
 cd sensors && ../.venv/bin/python -m unittest test_live_band.Gap.test_lost_samples_become_nan   # one test
 
 cd agent && ../.venv/bin/python -m unittest test_brain test_sleep test_activity test_voice_activity # agent tests
@@ -65,7 +65,9 @@ Closing the tab or stopping Vite must never interrupt a night. Keep device and r
   bounded by a timeout, a watchdog that drops a silent link, and the remembered device
   (`data/.recorder-<prefix>.json`). A subclass supplies `match(name)` and `setup(client)`, and may
   supply `kick()` and `before_disconnect()`. Every notification handler must set `self.last_rx`, or
-  the watchdog drops the link after `QUIET_S`.
+  the watchdog drops the link after `QUIET_S`. With no remembered device, `autoconnect()` first
+  asks macOS for a device that it already holds (`held_device()`, by the subclass's `SERVICE`): a
+  held device does not advertise, so a scan never finds it.
 
 `live_muse.py` and `live_polar.py` use all of `BleLink`. `live_band.py` is different: the kit's
 library (`vexo_open.Band`) holds the link and reconnects, so `BandLink` overrides `keep_linked`,
