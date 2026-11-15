@@ -100,7 +100,8 @@ import sleep  # noqa: E402
 from live_server import LiveServer  # noqa: E402
 
 RATE = 16000                  # the band's microphone: 16 kHz, mono, 20 ms a packet
-MODEL = "gemini-4-hydrogen"   # the fast one of the three the key reaches (listed 2026-11-14)
+MODEL = "gemini-3.5-flash-lite"  # the one that speaks: the fastest to its first words of those the key reaches (see talk())
+NOTES = "gemini-4-hydrogen"   # the one that writes the notes after a talk (brain.reflect): nobody waits for it
 VOICE = "flux-alexis-en"
 VOICE_SPEED = 0.7
 VOICE_EXPRESSIVITY = -2       # calm end of Flux's expressive range, requested 2026-11-14
@@ -265,10 +266,13 @@ class Voice(LiveServer):
             # one skill when there are more of them than an instruction should carry.
             + "\n# Your skills\n" + "".join(f"\n## {f.stem}\n\n{f.read_text()}" for f in sorted((HERE / "skills").glob("*.md"))))
         stt = DeepgramFluxSTTService(api_key=keys["DEEPGRAM_API_KEY"], mip_opt_out=True)
-        # thinking: measured 2026-11-14 with this prompt. Google's default thinks 7 to 10 s before the first
-        # word, "low" 2 to 3 s; "minimal" is refused for this model, and a budget of 0 is no faster than low.
+        # The time to the first words, measured 2026-11-14 with this prompt, three runs each:
+        # gemini-4-hydrogen 7 to 10 s with Google's default thinking and 2.3 to 3 s with "low" ("minimal" is
+        # refused, a budget of 0 is no faster); gemini-3.5-flash 5 to 9 s; gemini-3.5-flash-lite 0.5 to 0.7 s
+        # with no thinking setting and 0.7 to 1.1 s with "low". The memory is fetched before this step
+        # (Fetch), so it needs no long thought. Measure again before a change of the model.
         llm = GoogleLLMService(api_key=keys["GOOGLE_API_KEY"], settings=GoogleLLMService.Settings(
-            model=MODEL, system_instruction=system, thinking=GoogleLLMService.ThinkingConfig(thinking_level="low")))
+            model=MODEL, system_instruction=system))
         tts = DeepgramFluxTTSService(api_key=keys["DEEPGRAM_API_KEY"], mip_opt_out=True,
                                     settings=DeepgramFluxTTSService.Settings(
                                         voice=VOICE, speed=VOICE_SPEED, expressivity=VOICE_EXPRESSIVITY))
@@ -456,7 +460,7 @@ class Voice(LiveServer):
         self.push_state()
         if brain.day_text(self.day):
             try:
-                await brain.reflect(self.google, MODEL, self.day)
+                await brain.reflect(self.google, NOTES, self.day)
                 self.push_state()  # the page draws the new notes
             except Exception as e:  # no credit, no internet: the day is in its file, the notes stay as they were
                 self.err = f"The notes were not written: {str(e)[:200] or type(e).__name__}"
