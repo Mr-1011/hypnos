@@ -68,17 +68,28 @@ class Course {
   readonly samples: Sample[] = []
   shift = 0 // ms to add to a sample's time for the graph's clock
   private started = false
+  private talks = false // the agent's loop was on at the last sample
 
-  start() {
-    if (this.started) return
-    this.started = true
+  // the graph as it is when the page opens: nothing measured yet, and the made-up hours before now
+  reset() {
+    this.samples.length = 0
     if (SIM_H) {
       const from = Date.now() - SIM_H * 3600_000
       const day = new Date(from)
       this.shift = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime() - from // the night began at 00:00
       for (const s of simNight(from, (SIM_H * 3600_000) / STEP_MS, STEP_MS, SPEC_HZ)) this.samples.push(s)
     }
+  }
+
+  start() {
+    if (this.started) return
+    this.started = true
+    this.reset()
     window.setInterval(() => {
+      // the Demo switch starts a take, and every take begins at the same point of the graph (the user's rule, 2026-11-14)
+      const talks = !!(agent.online && agent.state?.on)
+      if (talks && !this.talks) this.reset()
+      this.talks = talks
       this.samples.push(sample())
       if (this.samples.length > MAX) this.samples.splice(0, this.samples.length - MAX)
     }, STEP_MS)
