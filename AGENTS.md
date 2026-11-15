@@ -150,6 +150,10 @@ keys are read from `.env` at each start. Its docstring is the reference.
   What a tool looked at goes into the agent's `state` as `sense` (`touch()`), and the Memory card
   rings it. `skills/` holds the steps for a situation, one Markdown file each, and `talk()` puts
   them after `prompt.md`.
+- A spoken sentence gets its memory before Gemini runs (`Fetch` in the pipeline, `Voice.fetch()`):
+  `sense` and `recall` at once, about 0.5 s, as a "(memory)" line with the stage of sleep. Gemini
+  then speaks in one step. Measured 2026-11-14 as text: the first sound 2.1 to 3.0 s after the
+  sentence, 4 to 7 s when Gemini chose the tools itself. A cue still goes through the tools.
 - What the agent is for (the user's rule, 2026-11-14): it answers what weighs on the person with
   an earlier time when the same kind of thing went well, in one or two sentences. Two cases: the
   person speaks in their sleep, and the body shows stress while they say nothing. It must name
