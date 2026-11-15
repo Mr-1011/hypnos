@@ -642,9 +642,7 @@ canvas {
   border-top: 2px solid var(--line-strong);
   min-width: 0;
 }
-.card.streaming {
-  border-top-color: var(--good);
-}
+/* a linked card has no colour on top (the user's rule, 2026-11-14): only a fault has one */
 .card.connecting,
 .card.reconnecting {
   border-top-color: var(--warn);
