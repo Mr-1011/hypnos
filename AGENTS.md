@@ -196,8 +196,9 @@ keys are read from `.env` at each start. Its docstring is the reference.
 - The Memory picture must stay calm (the user's rule, 2026-11-14: it jumped and bounced too much).
   The first picture and a card of a new size are shown at rest, a change of the dots moves slowly,
   and a click on a dot zooms the picture to it. The comments in `Memory.tsx` have the numbers.
-  A connected source and its items are drawn as a sign, not a dot (`SIGN` in `Memory.tsx`, by the
-  source's name): give a new source its sign there.
+  A connected source and its items are drawn as the app's mark, not a dot (`SIGN` in `Memory.tsx`,
+  by the source's name: Gmail's and Google Calendar's, the user's rule, 2026-11-14): give a new
+  source its mark there. The data behind a mark stay the made-up files of `agent/mock/`.
 - `src/lib/course.ts` samples every 2 s how much the body moves and how loud it is at the band's
   microphone (the band program's `sound`, which is null while the microphone is off), each from 0
   to 1, the heart rate (the Polar's, or else the Muse's), the agent's stage of sleep and the

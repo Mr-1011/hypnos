@@ -132,9 +132,10 @@ a demo, and delete the folder when the band has been worn for real weeks.
 
 The **Memory** card in the Live tab draws all of it as a graph: a dot for each note, each day and
 each calendar or mail item, and a line from a note or an item to the days it names. Point at a
-dot to read it. A connected tool and what came from it have a small sign in place of the dot: an
-envelope for the mail, a calendar page for the calendar. A click on a dot brings it near: the picture grows about it, and a second click,
-or a click beside the dots, goes back. A hand edit shows after a reload of the page.
+dot to read it. A connected tool and what came from it have a small mark in place of the dot:
+Gmail's for the mail, Google Calendar's for the calendar. A mark says what kind of tool it is, and
+the data behind it stay made up. A click on a dot brings it near: the picture grows about it, and
+a second click, or a click beside the dots, goes back. A hand edit shows after a reload of the page.
 
 ### Sleep
 

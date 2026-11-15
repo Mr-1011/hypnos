@@ -6,13 +6,43 @@ import { Panel } from './Panel'
 const COLOR: Record<BrainNode['kind'], string> = { person: '#f3f4f6', head: '#e0b64d', line: '#c47ad9', day: '#4c9be8', source: '#19d18d', item: '#5fbf9f', said: '#8fbdf0', detail: '#9bd8c2' }
 const NAME: Record<BrainNode['kind'], string> = { person: 'the person', head: 'a part of the notes', line: 'a note', day: 'a day', source: 'connected', item: 'from a connected source', said: 'that day', detail: 'more about it' }
 
-// A connected tool has its sign in place of a dot, and so has each thing that came from it: an
-// envelope for the mail, a page of a calendar for the calendar (the user's rule, 2026-11-14). The
-// key is the source's name (agent/brain.py sources()); one with no sign here stays a dot. Each is
-// drawn about 0 0 in a box of 12.
-const SIGN: Record<string, string> = {
-  mail: 'M-6 -4.5h12v9h-12z M-6 -4.5l6 5 6 -5',
-  calendar: 'M-5.5 -4h11v9.5h-11z M-5.5 -1h11 M-2.5 -6v3.2 M2.5 -6v3.2',
+// A connected tool has its mark in place of a dot, and so has each thing that came from it:
+// Gmail's for the mail and Google Calendar's for the calendar, small (the user's rule,
+// 2026-11-14: line drawings of an envelope and a calendar page were ugly). A mark says what kind
+// of tool it is. The data behind it are still the made-up files of agent/mock/, and no account is
+// connected: README says so, keep that. The key is the source's name (agent/brain.py sources());
+// one with no mark here stays a dot. box: the mark's own viewBox.
+const SIGN: Record<string, { box: [number, number, number, number]; mark: ReactNode }> = {
+  mail: {
+    box: [52, 42, 88, 66],
+    mark: (
+      <>
+        <path fill="#4285f4" d="M58 108h14V74L52 59v43c0 3.32 2.69 6 6 6" />
+        <path fill="#34a853" d="M120 108h14c3.32 0 6-2.69 6-6V59l-20 15" />
+        <path fill="#fbbc04" d="M120 48v26l20-15v-8c0-7.42-8.47-11.65-14.4-7.2" />
+        <path fill="#ea4335" d="M72 74V48l24 18 24-18v26L96 92" />
+        <path fill="#c5221f" d="M52 51v8l20 15V48l-5.6-4.2c-5.94-4.45-14.4-.22-14.4 7.2" />
+      </>
+    ),
+  },
+  calendar: {
+    box: [0, 0, 200, 200],
+    mark: (
+      <>
+        <path fill="#fff" d="M152.637 47.363H47.363v105.273h105.273z" />
+        {/* the styles of the dots' names would take this number's size and colour: its own style wins */}
+        <text x={100} y={131} textAnchor="middle" style={{ fontSize: 88, fontWeight: 700, fill: '#1a73e8', stroke: 'none' }}>
+          31
+        </text>
+        <path fill="#ea4335" d="M152.637 200L200 152.637h-47.363z" />
+        <path fill="#34a853" d="M152.637 152.637H47.363V200h105.273z" />
+        <path fill="#188038" d="M0 152.637v31.576A15.788 15.788 0 0 0 15.788 200h31.576v-47.363z" />
+        <path fill="#fbbc04" d="M200 47.363h-47.363v105.273H200z" />
+        <path fill="#1967d2" d="M200 47.363V15.788A15.785 15.785 0 0 0 184.212 0h-31.576v47.363z" />
+        <path fill="#4285f4" d="M152.637 0H15.788A15.785 15.785 0 0 0 0 15.788v136.849h47.363V47.363h105.273z" />
+      </>
+    ),
+  },
 }
 
 type P = { x: number; y: number; vx: number; vy: number }
@@ -229,8 +259,8 @@ export function Memory({ className = '', detail = false, children }: { className
             // The detailed picture has small dots: more of them fit, and the lines show
             const links = Math.sqrt(near.get(n.id)?.size ?? 0)
             const sign = SIGN[n.kind === 'source' ? n.id : n.kind === 'item' ? n.id.split('/')[0] : '']
-            const big = n.kind === 'source' ? 1.5 : 1 // the tool itself is larger than what came from it
-            const r = sign ? 7 * big : sat.has(n.id) ? 2.2 : detail ? (n.kind === 'person' ? 6 : 2.6 + 0.9 * links) : n.kind === 'person' ? 7 : 3 + 1.4 * links
+            const wide = n.kind === 'source' ? 20 : 13 // px: the tool itself is larger than what came from it
+            const r = sign ? wide / 2 : sat.has(n.id) ? 2.2 : detail ? (n.kind === 'person' ? 6 : 2.6 + 0.9 * links) : n.kind === 'person' ? 7 : 3 + 1.4 * links
             const more = !detail && holds.has(n.id)
             // a satellite has its name only while the pointer or the zoom is on it: a hundred names
             // at once are no picture, and a day's twelve lie on each other
@@ -255,9 +285,9 @@ export function Memory({ className = '', detail = false, children }: { className
                 {touched ? <circle className="touched" cx={x} cy={y} r={r + 5} stroke={COLOR[n.kind]} /> : null}
                 {sign ? (
                   <>
-                    {/* the card's colour behind the sign: no line runs through it */}
+                    {/* the card's colour behind the mark: no line runs through it */}
                     <circle className="tool" cx={x} cy={y} r={r + 2} />
-                    <path className="dot" d={sign} transform={`translate(${x} ${y}) scale(${big})`} fill="none" stroke={COLOR[n.kind]} strokeWidth={1.3 / big} strokeLinejoin="round" strokeLinecap="round" />
+                    <g transform={`translate(${x - ((sign.box[0] + sign.box[2] / 2) * wide) / sign.box[2]} ${y - ((sign.box[1] + sign.box[3] / 2) * wide) / sign.box[2]}) scale(${wide / sign.box[2]})`}>{sign.mark}</g>
                   </>
                 ) : (
                   <circle className="dot" cx={x} cy={y} r={r} fill={COLOR[n.kind]} />
