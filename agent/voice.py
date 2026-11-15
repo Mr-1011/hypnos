@@ -97,6 +97,7 @@ from vexo_open.audio import PcmDecoder  # noqa: E402
 
 from activity import Activity  # noqa: E402
 import brain  # noqa: E402
+from demo import prepare_david  # noqa: E402
 import sleep  # noqa: E402
 from live_server import LiveServer  # noqa: E402
 
@@ -181,9 +182,12 @@ class Guesses(FrameProcessor):
 class Voice(LiveServer):
     name = "Agent"
 
-    def __init__(self, band_url, streams):
+    def __init__(self, band_url, streams, demo=None):
         super().__init__()
         self.band_url = band_url
+        self.demo = demo
+        if demo == "david":
+            prepare_david()
         self.streams_of = streams  # where on the body -> the event stream of the program that measures there
         self.seen = {}        # where on the body -> (its last movement numbers, its last heart rate)
         self.eeg = []         # this epoch's EEG: the Muse's band shares, one entry for each of its stats
@@ -200,7 +204,7 @@ class Voice(LiveServer):
 
     def state(self):
         return {"t": "state", "on": bool(self.worker), "err": self.err, "lines": list(self.lines), "brain": brain.graph(),
-                "sense": self.sensed, "activity": self.activity.state(), "sleep": self.night.now()}
+                "sense": self.sensed, "activity": self.activity.state(), "sleep": self.night.now(), "demo": self.demo}
 
     def said(self, who, text, final=True):
         ts = int(time.time() * 1000)
@@ -238,6 +242,9 @@ class Voice(LiveServer):
         if missing:
             return f"The agent needs {' and '.join(missing)} in .env (env.example has the form)."
         print(NOTE, flush=True)  # before any sound is sent
+        if self.demo == "david":
+            prepare_david()  # every take starts with the same facts, in its own new recording folder
+            self.lines.clear()
         self.day, self.sensed, self.night = brain.today(), None, sleep.Night()  # the talk begins at bedtime: a new night
         self.google = genai.Client(api_key=keys["GOOGLE_API_KEY"], http_options={"api_version": "v1beta"})  # v1beta: the decisions model
         self.spoke = time.time()
@@ -250,6 +257,8 @@ class Voice(LiveServer):
             # one skill when there are more of them than an instruction should carry.
             + "\n# Your skills\n" + "".join(f"\n## {f.stem}\n\n{f.read_text()}" for f in sorted((HERE / "skills").glob("*.md"))))
         stt = DeepgramFluxSTTService(api_key=keys["DEEPGRAM_API_KEY"], mip_opt_out=True)
+        if self.demo == "david":
+            system += "\n" + (HERE / "demo" / "david" / "instruction.md").read_text()
         # thinking: measured 2026-11-14 with this prompt. Google's default thinks 7 to 10 s before the first
         # word, "low" 2 to 3 s; "minimal" is refused for this model, and a budget of 0 is no faster than low.
         llm = GoogleLLMService(api_key=keys["GOOGLE_API_KEY"], settings=GoogleLLMService.Settings(
@@ -259,12 +268,12 @@ class Voice(LiveServer):
                                         voice=VOICE, speed=VOICE_SPEED, expressivity=VOICE_EXPRESSIVITY))
         # Pipecat tells the model of each tool by its name, its docstring and its arguments, and runs
         # the loop: the model calls tools, gets what they return, and then speaks.
-        tools = [getattr(self, name) for name in TOOLS]
+        tools = [getattr(self, name) for name in (*TOOLS, *(("demo_context",) if self.demo else ()))]
         for tool in tools:
             llm.register_direct_function(tool)
-        # the agent speaks first: this line is its cue, the person never said it
+        # In the filmed David scene the actor speaks first. No startup call can interrupt the take.
         you, agent = LLMContextAggregatorPair(
-            LLMContext([{"role": "user", "content": "(cue) The person has just gone to bed."}], tools=tools))
+            LLMContext([] if self.demo else [{"role": "user", "content": "(cue) The person has just gone to bed."}], tools=tools))
 
         @you.event_handler("on_user_turn_stopped")
         async def person_finished(aggregator, strategy, message):
@@ -287,8 +296,10 @@ class Voice(LiveServer):
             self.err = str(frame.error)[:300]
             self.activity.finish("error")
 
-        self.activity.begin()
-        await self.worker.queue_frames([LLMRunFrame()])
+        self.activity.finish("idle")
+        if not self.demo:
+            self.activity.begin()
+            await self.worker.queue_frames([LLMRunFrame()])
         self.err = None
         self.loop = asyncio.create_task(self.run_loop())
         self.push_state()
@@ -314,6 +325,24 @@ class Voice(LiveServer):
         self.push_state()
 
     # The agent's tools (TOOLS). The docstrings are for the model: they say when to use each one.
+
+    async def demo_context(self, params, topic: str):
+        """Retrieve a fact from David's fictional filming context and highlight its actual graph node.
+
+        Args:
+            topic: event for the upcoming pitch, worry for David's statement to his friend,
+                or participation for his confirmation that Maya presents with him tomorrow.
+        """
+        async with self.activity.tool("demo_context"):
+            patterns = {"event": ("item", "Investor pitch"),
+                        "worry": ("said", "I'm scared I'll let them down"),
+                        "participation": ("said", "Maya's presenting with me again tomorrow")}
+            kind, text = patterns.get(topic, (None, ""))
+            found = [n for n in brain.graph()["nodes"]
+                     if self.demo == "david" and n["kind"] == kind and text in n["label"]]
+            self.touch([n["id"] for n in found])
+            await params.result_callback("Mock data:\n" + "\n".join(n["label"] for n in found)
+                                         if found else "No matching demo fact found.")
 
     async def recall(self, params, words: str):
         """Search the earlier days, weeks and months for a kind of thing, to find a time when it went well.
@@ -361,6 +390,8 @@ class Voice(LiveServer):
 
     async def cue(self, what):
         """The sensors make the agent speak: one line into the talk, as if it had been said, with the body's numbers."""
+        if self.demo:
+            return  # the filmed reactive scene waits for speech; sensors still run and show real readings
         self.spoke = time.time()
         self.sensed = None  # a new turn: the Memory card rings what the agent looks at now
         self.activity.begin()
@@ -431,7 +462,7 @@ class Voice(LiveServer):
             self.err = str(e) or type(e).__name__
         self.worker = None
         self.activity.finish("error" if self.err else "idle")
-        if brain.day_text(self.day):
+        if not self.demo and brain.day_text(self.day):
             try:
                 await brain.reflect(self.google, MODEL, self.day)
                 self.push_state()  # the page draws the new notes
@@ -458,6 +489,7 @@ class Voice(LiveServer):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=5304)
+    ap.add_argument("--demo", choices=["david"], help="isolated David mock context for filming; waits for speech")
     ap.add_argument("--band", default="http://127.0.0.1:5303", help="where live_band.py answers")
     ap.add_argument("--muse", default="http://127.0.0.1:5301", help="where live_muse.py answers")
     ap.add_argument("--polar", default="http://127.0.0.1:5302", help="where live_polar.py answers")
@@ -465,7 +497,7 @@ def main():
     logger.remove()
     logger.add(sys.stderr, level="INFO")  # Pipecat's default prints every frame
     voice = Voice(args.band + "/api/audio", {"wrist": args.band + "/api/stream", "head": args.muse + "/api/stream",
-                                             "chest": args.polar + "/api/stream"})
+                                             "chest": args.polar + "/api/stream"}, demo=args.demo)
     voice.run(args.port, [voice.sensors])
 
 

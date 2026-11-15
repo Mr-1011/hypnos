@@ -20,6 +20,8 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 DIR = HERE.parent / "data" / "brain"
 PAST = HERE / "mock" / "days"  # a made-up past: see days()
+SOURCES = HERE / "mock"
+PERSON = "the person"
 
 # shortcut: these three are set for the awake demo, from one afternoon and no real night; set them
 # again from recorded nights, where restless is a few turns in minutes and not 10 s of moving.
@@ -68,7 +70,7 @@ def sources():
     """What the agent is connected to besides the band, as {name: a Markdown list}.
     shortcut: made-up files in agent/mock/ (calendar.md, mail.md; one more file is one more source),
     replace them with the person's real calendar and mail when there is a login for those."""
-    return {f.stem: f.read_text() for f in sorted((HERE / "mock").glob("*.md"))}
+    return {f.stem: f.read_text() for f in sorted(SOURCES.glob("*.md"))}
 
 
 def recall(words, before):
@@ -86,7 +88,7 @@ def graph():
     lines, the connected sources and their items, and the days. A line or an item that names a
     date is linked to that day. A dot with "in" is inside another dot, and the page shows it when
     that one is opened: what was said on a day, and the indented lines under a note or an item."""
-    nodes = {"person": {"id": "person", "label": "the person", "kind": "person"}}
+    nodes = {"person": {"id": "person", "label": PERSON, "kind": "person"}}
     links = []
     for day, f in sorted(days().items()):
         nodes[day] = {"id": day, "label": day, "kind": "day"}

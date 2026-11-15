@@ -6,11 +6,12 @@ Fictional English scripts approved for the demo. These are not real recordings, 
 sleep responses, or evidence of prevention. Show the daytime context before the night
 scene. Label the sleep scenes as simulated. Use Alexis, speed 0.7, expressivity -2.
 
-This document is a storyboard, not an automatic simulator. It does not load either person's
-history into the live agent. David and Leah are separate people: never combine their
-memories into the same live brain. The existing agent/mock files are a different demo
-history and do not establish either person's context below. A live-model run needs the
-matching isolated person, day and event context first; exact replies are illustrative.
+This document is the storyboard, not an automatic audio replay. David now has a live filming
+mode: `./run.sh --demo-david`, or `agent/voice.py --demo david` with the other services running.
+It loads isolated mock memories from `agent/demo/david/`. Turn Demo on, say "Oh no, I can't"
+near the real band, then pause. Actual STT, Gemini retrieval calls and Alexis produce the scene;
+rehearse first, because a model instruction cannot guarantee exact wording or ordering.
+Leah remains a storyboard. Never combine David and Leah in the same live brain.
 
 ## 1. David — reactive reassurance
 
@@ -95,8 +96,8 @@ when all context checks pass. Bedtime alone does not trigger this second scene.
 
 The existing backend emits movement/restlessness and sleep-to-awake cues; it does not
 consume the dashboard's arousal curve as a trigger. The dashboard is a view, and its
-made-up history is not sensor evidence. Driving a reproducible simulated cue and switching
-between isolated David/Leah contexts is separate work from this storyboard update.
+made-up history is not sensor evidence. David has an isolated live context; driving a simulated Leah cue and loading her isolated
+context remain separate work.
 
 For a one-minute video, show David's spoken trigger and Leah's silent sensor trigger.
 Keep each evidence card readable, show the response, then leave silence. This demonstrates

@@ -5,7 +5,7 @@ import { Panel } from './Panel'
 
 const COLOR: Record<BrainNode['kind'], string> = { person: '#f3f4f6', head: '#e0b64d', line: '#c47ad9', day: '#4c9be8', source: '#19d18d', item: '#5fbf9f', said: '#8fbdf0', detail: '#9bd8c2' }
 const NAME: Record<BrainNode['kind'], string> = { person: 'the person', head: 'a part of the notes', line: 'a note', day: 'a day', source: 'connected', item: 'from a connected source', said: 'that day', detail: 'more about it' }
-const TOOL = { sense: 'Checking context', recall: 'Finding memories', body: 'Checking sensors', stay_quiet: 'Staying quiet' }
+const TOOL = { sense: 'Checking context', recall: 'Finding memories', body: 'Checking sensors', stay_quiet: 'Staying quiet', demo_context: 'Checking David’s context' }
 const PHASE = { idle: '', processing: 'Preparing response', complete: 'Response ready', quiet: 'Staying quiet', error: 'Interrupted' }
 
 // A connected tool has its sign in place of a dot, and so has each thing that came from it: an
@@ -249,7 +249,7 @@ export function Memory({ className = '', detail = false, children }: { className
 
   return (
     <Panel
-      title="Memory"
+      title={ag.state?.demo === 'david' ? 'Memory · David demo' : 'Memory'}
       className={className}
       tools={
         <>

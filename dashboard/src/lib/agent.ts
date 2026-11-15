@@ -15,6 +15,7 @@ export interface BrainNode {
 }
 
 export interface AgentState {
+  demo?: 'david' | null
   on: boolean
   err: string | null // what went wrong in the loop, in the service's own words
   lines: [number, Who, string][] // [utc ms, who, what was said]
@@ -25,7 +26,7 @@ export interface AgentState {
   activity?: {
     turn: number
     phase: 'idle' | 'processing' | 'complete' | 'quiet' | 'error'
-    steps: { id: number; tool: 'sense' | 'recall' | 'body' | 'stay_quiet'; status: 'running' | 'done' | 'failed' | 'cancelled' }[]
+    steps: { id: number; tool: 'sense' | 'recall' | 'body' | 'stay_quiet' | 'demo_context'; status: 'running' | 'done' | 'failed' | 'cancelled' }[]
   }
   // agent/sleep.py Night.now(): the stage of the last half minute (awake, drowsy, light, deep, rem),
   // the cycle (0 before sleep), minutes since sleep began, and whether the Muse's EEG was in it

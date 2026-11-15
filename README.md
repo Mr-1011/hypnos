@@ -49,6 +49,26 @@ the form; nothing reads it yet.
 
 Ctrl-C ends everything. `run.sh` starts a program again if it exits.
 
+## Film the David scene
+
+Start the stack with `./run.sh --demo-david` (stop an already running stack first).
+Alternatively, run `.venv/bin/python agent/voice.py --demo david` alongside the sensor programs
+and Vite, with no other agent on port 5304. Use the real band; `--sim` reads a fable and does
+not hear the actor. The usual Deepgram and Google keys are required.
+
+Open **Focus**, link the team's band, then switch **Demo** on. The header says **David demo**.
+The agent waits silently. Say **“Oh no, I can't”** clearly near the band, then pause to end
+the turn. Gemini is instructed to retrieve the upcoming pitch, David's worry, Maya's current
+participation, and his earlier helpful experience in order, then say **“You and Maya are a team.”**
+The graph follows actual returned facts. These are live STT/model/TTS calls, not a fixed audio
+replay: rehearse once before filming; recognition, tool ordering and exact wording are not guaranteed.
+
+`agent/demo/david/` contains the clearly labeled fictional facts. The pitch date is tomorrow;
+each switch-on creates a fresh take in `data/demo-david/`, separate from `data/brain/` and the
+default mock history. Demo off/on resets for another take. Sensor readings stay real; this
+mode does not fabricate a sleeping stage and does not speak from sensor cues. Restart without
+`--demo david` (or without `--demo-david` in run.sh) to return to the normal agent.
+
 ## Connect the devices
 
 Use the switch on a card. A device that is not around yet is retried
@@ -137,7 +157,8 @@ English everyday conversation simulations are in [agent/simulations.md](agent/si
 the approved David (sleep speech) and Leah (silent, sensor-triggered) stories. Use them as
 role-play scripts; they are not loaded into the person's memory or mock calendar/mail.
 The dashboard arousal curve itself does not trigger the agent; existing backend restlessness
-cues do. Automatic playback and isolated character contexts are not implemented by these scripts.
+cues do. David has an isolated live filming mode (see above); Leah remains a storyboard.
+Neither is an automatic audio replay.
 The replies are examples, not fixed responses from the live model.
 
 ### The brain
