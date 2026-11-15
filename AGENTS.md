@@ -198,7 +198,8 @@ keys are read from `.env` at each start. Its docstring is the reference.
   `shortcut:` comment at `--demo`.
 - Filming: `voice.py --demo david` (the default; `run.sh --demo-david` says the same) loads isolated mock facts via
   `demo.py` into a new `data/demo-david/take-*` folder. The David instruction keeps a worked
-  example, not an exact-answer rule. Wait for speech, skip startup and sensor speech, label
+  example, and it fixes the words of that example's answer (the user's rule, 2026-11-14: the take
+  needs "You and Maya are a team", and the model also said "presenting together"). Wait for speech, skip startup and sensor speech, label
   the header David demo, and keep actual sleep readings. Normal memory is untouched.
   After the agent's first words a David take hears nothing more (`BandInput(once=True)`; the
   user's rule, 2026-11-14: talk in the room while the video is filmed must start no second

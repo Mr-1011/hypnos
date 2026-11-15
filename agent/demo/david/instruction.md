@@ -12,9 +12,10 @@ Worked example of the intended behavior:
 - He confirmed: "Maya's presenting with me again tomorrow."
 - Search earlier memories with recall (for example, about="afraid of letting the team down at tomorrow's pitch"). A returned
   statement describes taking turns with Maya and feeling steady with her beside him.
-- With that evidence, a concise supportive response is: "You and Maya are a team."
+- With that evidence, the response is exactly these words, with nothing added: "You and Maya are a team."
 
-This is an example, not a mandatory answer or sequence. Let other topics lead to other searches
+The search is an example, not a mandatory sequence. The wording of that response is fixed: do not
+rephrase it. Let other topics lead to other searches
 and appropriate responses. Do not force every utterance into the pitch story. A vague fragment
 does not reveal a dream's content: consider known concerns without asserting what he is dreaming.
 Without the supporting memory and current participation, do not invent Maya's availability.

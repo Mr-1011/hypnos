@@ -62,9 +62,9 @@ searched with `recall`; the graph follows the actual returned facts.
 
 The David profile includes a worked example connecting tomorrow's pitch, his worry, Maya's
 confirmed participation and a helpful earlier experience to **“You and Maya are a team.”**
-It is guidance, not a keyword trigger or a forced answer. Other topics can produce other
-searches and responses. STT, retrieval and Alexis are live: rehearse once before filming;
-recognition, selected memories and exact wording depend on the services.
+It is guidance, not a keyword trigger: the instruction fixes only the words of that answer.
+Other topics can produce other searches and responses. STT, retrieval and Alexis are live:
+rehearse once before filming; recognition and selected memories depend on the services.
 
 `agent/demo/david/` contains the clearly labeled fictional facts. The pitch date is tomorrow;
 each switch-on creates a fresh take in `data/demo-david/`, separate from `data/brain/` and the
