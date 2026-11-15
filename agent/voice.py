@@ -6,7 +6,7 @@ One Pipecat pipeline, in its own process so that nothing here can hold up a reco
     the band's sound (live_band.py, /api/audio, Opus)
       -> Deepgram Flux      speech to text; it also decides when the person has finished
       -> Gemini             the agent (prompt.md): it calls its tools until it knows what to say
-      -> Deepgram Flux TTS  text to speech (Alexis, speed 0.7, expressivity -2)
+      -> Deepgram Flux TTS  text to speech (Alexis, speed 0.8, expressivity -2)
       -> this Mac's sound output (the band has no speaker): the speakers, or AirPods on the Mac
 
 The agent does not ask the person about their day: it knows it. For as long as this program runs it
@@ -107,7 +107,7 @@ RATE = 16000                  # the band's microphone: 16 kHz, mono, 20 ms a pac
 MODEL = "gemini-3.5-flash-lite"  # the one that speaks: the fastest to its first words of those the key reaches (see talk())
 NOTES = "gemini-4-hydrogen"   # the one that writes the notes after a talk (brain.reflect): nobody waits for it
 VOICE = "flux-alexis-en"
-VOICE_SPEED = 0.7
+VOICE_SPEED = 0.8             # the user, 2026-11-14: 0.7 was too slow
 VOICE_EXPRESSIVITY = -2       # calm end of Flux's expressive range, requested 2026-11-14
 ECHO_S = 0.6                  # the room still holds the agent's voice this long after it stops
 CALM_GAP_S = 120              # no calm words sooner than this after the agent last spoke; a guess, no night behind it

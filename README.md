@@ -114,7 +114,7 @@ show in the Transcript panel. The voice plays on the Mac's sound output (the ban
 speaker): the speakers, or AirPods linked to the Mac.
 
 Deepgram hears (Flux, which also decides when you have finished) and speaks (Flux TTS,
-Alexis in English, speed 0.7, expressivity -2 for calm delivery); Gemini writes
+Alexis in English, speed 0.8, expressivity -2 for calm delivery); Gemini writes
 the answers from `agent/prompt.md`, about 1.5 s after the end of your sentence (measured as
 text, without the microphone). So the band's sound goes to Deepgram, and what is said goes as
 text to Google: tell the people near the band first.
