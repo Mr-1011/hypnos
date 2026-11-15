@@ -1,5 +1,13 @@
 # Hypnos
 
+<p align="center">
+  <img src="docs/assets/hypnos-caps-logo-dark.png" alt="Hypnos — gold emblem and wordmark on a dark background" width="800" />
+</p>
+
+<p align="center">
+  <img src="docs/assets/hypnos-icon-dark.png" alt="Hypnos icon — gold winged profile on a dark square" width="144" />
+</p>
+
 When you sleep, everything sleeps except your ears. Hypnos uses that: a channel where your agent
 and you talk while you fall asleep. Built at VexoHacks, 2026-11-14. A prototype, not a medical device.
 
