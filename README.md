@@ -51,9 +51,9 @@ Ctrl-C ends everything. `run.sh` starts a program again if it exits.
 
 ## Film the David scene
 
-Start the stack with `./run.sh --demo-david` (stop an already running stack first).
-Alternatively, run `.venv/bin/python agent/voice.py --demo david` alongside the sensor programs
-and Vite, with no other agent on port 5304. Use the real band; `--sim` reads a fable and does
+The David context is what the agent starts with: `./run.sh` is enough (`--demo-david` says the
+same). With no other agent on port 5304, `.venv/bin/python agent/voice.py` alongside the sensor
+programs and Vite does the same. Use the real band; `--sim` reads a fable and does
 not hear the actor. The usual Deepgram and Google keys are required.
 
 Open **Focus**, link the team's band, then switch **Demo** on. The header says **David demo**.
@@ -71,8 +71,8 @@ recognition, selected memories and exact wording depend on the services.
 `agent/demo/david/` contains the clearly labeled fictional facts. The pitch date is tomorrow;
 each switch-on creates a fresh take in `data/demo-david/`, separate from `data/brain/` and the
 default mock history. Demo off/on resets for another take. Sensor readings stay real; this
-mode does not fabricate a sleeping stage and does not speak from sensor cues. Restart without
-`--demo david` (or without `--demo-david` in run.sh) to return to the normal agent.
+mode does not fabricate a sleeping stage and does not speak from sensor cues. Restart the agent
+with `agent/voice.py --demo off` to give it the real memory in `data/brain/`.
 
 ## Connect the devices
 

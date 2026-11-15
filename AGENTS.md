@@ -192,7 +192,10 @@ keys are read from `.env` at each start. Its docstring is the reference.
 - `ContextLookup` runs `sense` for each settled speech turn before Gemini can respond, in
   normal and David mode. Follow-up tool calls reuse that turn; the model selects `recall`
   queries from the conversation and relevant context. No fixed phrase or search sequence.
-- Filming: `voice.py --demo david` (or `run.sh --demo-david`) loads isolated mock facts via
+- The David context is the agent's default (the user's rule, 2026-11-14: the Demo switch must
+  give the demo's answer with no flag); `voice.py --demo off` gives it the real memory. See the
+  `shortcut:` comment at `--demo`.
+- Filming: `voice.py --demo david` (the default; `run.sh --demo-david` says the same) loads isolated mock facts via
   `demo.py` into a new `data/demo-david/take-*` folder. The David instruction keeps a worked
   example, not an exact-answer rule. Wait for speech, skip startup and sensor speech, label
   the header David demo, and keep actual sleep readings. Normal memory is untouched.

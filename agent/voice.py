@@ -529,7 +529,10 @@ class Voice(LiveServer):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=5304)
-    ap.add_argument("--demo", choices=["david"], help="isolated David mock context for filming; waits for speech")
+    # shortcut: the David context is what the agent starts with (the user's rule, 2026-11-14: the Demo
+    # switch must give the demo's answer with no flag); make "off" the default when the demo is over.
+    ap.add_argument("--demo", choices=["david", "off"], default="david",
+                    help="david: isolated David mock context, waits for speech. off: the real memory in data/brain/")
     ap.add_argument("--band", default="http://127.0.0.1:5303", help="where live_band.py answers")
     ap.add_argument("--muse", default="http://127.0.0.1:5301", help="where live_muse.py answers")
     ap.add_argument("--polar", default="http://127.0.0.1:5302", help="where live_polar.py answers")
@@ -537,7 +540,7 @@ def main():
     logger.remove()
     logger.add(sys.stderr, level="INFO")  # Pipecat's default prints every frame
     voice = Voice(args.band + "/api/audio", {"wrist": args.band + "/api/stream", "head": args.muse + "/api/stream",
-                                             "chest": args.polar + "/api/stream"}, demo=args.demo)
+                                             "chest": args.polar + "/api/stream"}, demo=None if args.demo == "off" else args.demo)
     voice.run(args.port, [voice.sensors])
 
 
