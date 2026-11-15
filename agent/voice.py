@@ -121,9 +121,10 @@ NOTE = ("Note: while the agent runs, everything the band's microphone hears is s
 class BandInput(BaseInputTransport):
     """The band's microphone as a Pipecat input: the Opus packets live_band.py streams, decoded."""
 
-    def __init__(self, url):
+    def __init__(self, url, once=False):
         super().__init__(TransportParams(audio_in_enabled=True, audio_in_sample_rate=RATE))
         self.url = url
+        self.once = once  # the filmed scene: after the agent's first words the loop hears nothing more
         self.reader = None
         self.deaf_until = 0.0  # time.time() until which the band hears the agent, not the person
 
@@ -146,7 +147,7 @@ class BandInput(BaseInputTransport):
         # the person cannot interrupt it; upgrade to echo cancellation when that is wanted.
         if isinstance(frame, BotStartedSpeakingFrame):
             self.deaf_until = math.inf
-        elif isinstance(frame, BotStoppedSpeakingFrame):
+        elif isinstance(frame, BotStoppedSpeakingFrame) and not self.once:
             self.deaf_until = time.time() + ECHO_S
 
     async def read(self):
@@ -325,7 +326,10 @@ class Voice(LiveServer):
 
         speaker = LocalAudioTransport(LocalAudioTransportParams(audio_out_enabled=True))
         self.worker = PipelineWorker(
-            Pipeline([BandInput(self.band_url), stt, Guesses(lambda text: self.said("you", text, final=False)),
+            # The David scene ends with the agent's answer (the user's rule, 2026-11-14): what is said in
+            # the room after it, while the video is filmed, must start no second answer. The next
+            # switch-on of Demo is a new take, and it listens again.
+            Pipeline([BandInput(self.band_url, once=bool(self.demo)), stt, Guesses(lambda text: self.said("you", text, final=False)),
                       you, ContextLookup(self), llm, tts, speaker.output(), agent]),
             idle_timeout_secs=None)  # a quiet night is no reason to stop
 
