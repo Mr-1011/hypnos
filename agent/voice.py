@@ -360,15 +360,15 @@ class Voice(LiveServer):
 
     # The agent's tools (TOOLS). The docstrings are for the model: they say when to use each one.
 
-    async def recall(self, params, words: str):
-        """Search the earlier days, weeks and months for a kind of thing, to find a time when it went well.
-        It gives every line that has one of the words in it, with its day and how long ago that was.
+    async def recall(self, params, about: str):
+        """Search the earlier days, weeks and months for a time when the same kind of thing went well.
+        It gives the lines that tell of such a time, the surest first, each with its day and how long ago that was.
 
         Args:
-            words: A few words for the kind of thing, with other words for the same: "presentation pitch talk".
+            about: What weighs on the person, in a few words: "afraid of the pitch to the judges tonight".
         """
         async with self.activity.tool("recall"):
-            found = brain.recall(words.split(), self.day)
+            found = await brain.recall(self.google, about, self.day)
             visible = {n["id"] for n in brain.graph()["nodes"]}
             # Focus now shows individual statements. Highlight only the returned statements;
             # older lines outside the graph's last-12 limit can still identify their day.

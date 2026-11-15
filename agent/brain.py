@@ -9,7 +9,7 @@
     data/brain/person.before.md the notes as they were before the last rewrite
 
 It is the person's own speech, so it lives in data/, which git ignores. The notes go to Google as
-text with every talk, like the talk itself.
+text with every talk, like the talk itself, and the lines of the earlier days with every recall.
 
     cd agent && ../.venv/bin/python -m unittest test_brain
 """
@@ -68,19 +68,28 @@ def days():
 
 def sources():
     """What the agent is connected to besides the band, as {name: a Markdown list}.
-    shortcut: made-up files in agent/mock/ (calendar.md, mail.md; one more file is one more source),
-    replace them with the person's real calendar and mail when there is a login for those."""
+    shortcut: made-up files in agent/mock/ (one file is one source, and its name is the source's),
+    replace them with the person's real accounts when there is a login for those."""
     return {f.stem: f.read_text() for f in sorted(SOURCES.glob("*.md"))}
 
 
-def recall(words, before):
-    """What the earlier days hold about a thing: their lines with one of the words in them, as
-    [(day, line)], the newest day first. before: the day of the talk, which is not an earlier day.
-    shortcut: it finds words, not meaning, and reads every day's file; give the days an index that
-    finds meaning when the band has been worn for more than a few months."""
-    words = [w.lower() for w in words]
-    return [(day, line[2:]) for day, f in sorted(days().items(), reverse=True) if day < before
-            for line in f.read_text().splitlines() if line.startswith("- ") and any(w in line.lower() for w in words)][:30]
+async def recall(client, about, before):
+    """The earlier times when the same kind of thing went well, as [(day, line)], the surest first.
+    The decisions model answers one closed question for each line of the earlier days, so it finds
+    meaning and not words: "scared of the presentation" found "The pitch went really well" (0.3 to
+    0.6 s for 25 lines, 2026-11-14). about: what weighs on the person, in a few words. before: the
+    day of the talk, which is not an earlier day. client: a genai.Client, held by the caller.
+    shortcut: one question for each line of every earlier day, which is right for weeks of days;
+    give the days an index that finds meaning when the band has been worn for more than a few months."""
+    lines = [(day, line[2:]) for day, f in sorted(days().items()) if day < before
+             for line in f.read_text().splitlines() if line.startswith("- ")]
+    if not lines:
+        return []
+    a = (await client.aio.decisions.create(model=SENSE, input=f"What weighs on the person: {about}", questions={
+        f"n{i}": {"type": "noul", "instructions": "This line from an earlier day tells that the same kind of thing went well: "
+                                                  + line.replace("**", "")}
+        for i, (_, line) in enumerate(lines)})).answers
+    return [lines[i] for p, i in sorted(((a[f"n{i}"].noul, i) for i in range(len(lines))), reverse=True) if p > 0.5][:5]
 
 
 def graph():

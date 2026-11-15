@@ -9,11 +9,12 @@ interface Props {
   facts: { label: string; value: string; tone?: Tone }[]
   api: (path: string, body?: unknown) => Promise<unknown>
   recording?: boolean // switching off then asks first: a device switched off stays off for the night
+  detail?: boolean // also the device's own name, as "Vexo-HACK-61": only the Debug tab needs it (the user's rule, 2026-11-14)
 }
 
 // One device: its link, its few health numbers, and a switch. On links the remembered device, or
 // the first one a search finds; off unlinks and forgets it.
-export function DeviceCard({ title, online, st, facts, api, recording }: Props) {
+export function DeviceCard({ title, online, st, facts, api, recording, detail }: Props) {
   const [busy, setBusy] = useState(false)
   const [miss, setMiss] = useState('') // why the last switch-on found nothing
   const link = st?.link ?? 'idle'
@@ -42,7 +43,7 @@ export function DeviceCard({ title, online, st, facts, api, recording }: Props) 
       <header>
         <div className="card-id">
           <div className="card-title">{title}</div>
-          <div className="card-name">{online ? (name ?? '-') : 'Program not running'}</div>
+          {detail ? <div className="card-name">{online ? (name ?? '-') : 'Program not running'}</div> : null}
         </div>
         {/* the switch says on and off; the pill is for what it cannot say: a search, a link that is coming or lost, a program that is down */}
         {look === 'streaming' || look === 'idle' ? null : (

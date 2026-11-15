@@ -130,8 +130,11 @@ keys are read from `.env` at each start. Its docstring is the reference.
   lines, and the talk), and `person.md` is the notes about the person. `talk()` puts the notes
   and the day after `prompt.md`; when the loop ends, `brain.reflect()` has Gemini write the notes
   again (`reflect.md` says how).
-- The calendar and the mail are mock data: `brain.sources()` reads the Markdown files in
-  `agent/mock/` (one file is one source), and no real account is connected. They go into the
+- The calendar, the mail, Slack, WhatsApp and Notion are mock data: `brain.sources()` reads the
+  Markdown files in `agent/mock/` (one file is one source, and the file's name is the name the
+  page and the prompt show), and no real account is connected. Keep every file short (the
+  user's rule, 2026-11-14: 16 items were too much, 9 stayed, one for each of the three apps): most
+  of what the agent knows comes from what the band heard. They go into the
   system prompt, the graph (`source` and `item` nodes) and the questions of `brain.sense()`. Keep
   the "Mock data" heading of each file, and never present them as the person's real accounts.
 - The weeks before 2026-11-14 are mock data too: `agent/mock/days/` holds made-up days, and
@@ -139,8 +142,9 @@ keys are read from `.env` at each start. Its docstring is the reference.
   band was worn for one day, and `recall` needs a past. Keep the "Mock data" heading of each
   file, and never present a made-up day as recorded.
 - The agent is a loop with tools, which Pipecat runs: `TOOLS` in `voice.py` names them, each is a
-  method of `Voice`, and its docstring is what the model reads. `recall` searches the earlier days
-  (`brain.recall()`, words and not meaning: see its `shortcut:` comment),
+  method of `Voice`, and its docstring is what the model reads. `recall` asks Google's decisions
+  model about every line of the earlier days (`brain.recall()`, about 0.5 s: does the line tell
+  that the same kind of thing went well; meaning and not words, see its `shortcut:` comment),
   `sense` asks Google's decisions model (`brain.sense()`, about 0.5 s: a yes/no question for every
   note and item, and one for worry), `body` gives the sensors' numbers, `stay_quiet` says nothing.
   What a tool looked at goes into the agent's `state` as `sense` (`touch()`), and the Memory card
@@ -215,8 +219,9 @@ keys are read from `.env` at each start. Its docstring is the reference.
   smooth automatic zoom and a large excerpt (user request, 2026-11-14); clicking takes manual
   control for the current turn. Moving light points show retrieved connections only.
   The comments in `Memory.tsx` have the numbers.
-  A connected source and its items are drawn as a sign, not a dot (`SIGN` in `Memory.tsx`, by the
-  source's name): give a new source its sign there.
+  A connected source and its items use the app's mark (`SIGN` in `Memory.tsx`, by source name):
+  Gmail, Google Calendar, Slack, WhatsApp and Notion. Give new sources their mark there.
+  The data behind these marks stay the fictional files of `agent/mock/`.
 - `src/lib/course.ts` samples every 2 s how much the body moves and how loud it is at the band's
   microphone (the band program's `sound`, which is null while the microphone is off), each from 0
   to 1, the heart rate (the Polar's, or else the Muse's), the agent's stage of sleep and the

@@ -8,13 +8,74 @@ const NAME: Record<BrainNode['kind'], string> = { person: 'the person', head: 'a
 const TOOL = { sense: 'Checking context', recall: 'Finding memories', body: 'Checking sensors', stay_quiet: 'Staying quiet' }
 const PHASE = { idle: '', processing: 'Preparing response', complete: 'Response ready', quiet: 'Staying quiet', error: 'Interrupted' }
 
-// A connected tool has its sign in place of a dot, and so has each thing that came from it: an
-// envelope for the mail, a page of a calendar for the calendar (the user's rule, 2026-11-14). The
-// key is the source's name (agent/brain.py sources()); one with no sign here stays a dot. Each is
-// drawn about 0 0 in a box of 12.
-const SIGN: Record<string, string> = {
-  mail: 'M-6 -4.5h12v9h-12z M-6 -4.5l6 5 6 -5',
-  calendar: 'M-5.5 -4h11v9.5h-11z M-5.5 -1h11 M-2.5 -6v3.2 M2.5 -6v3.2',
+// A connected tool has its mark in place of a dot, and so has each thing that came from it:
+// Gmail's for the mail and Google Calendar's for the calendar, small (the user's rule,
+// 2026-11-14: line drawings of an envelope and a calendar page were ugly). A mark says what kind
+// of tool it is. The data behind it are still the made-up files of agent/mock/, and no account is
+// connected: README says so, keep that. The key is the source's name (agent/brain.py sources());
+// one with no mark here stays a dot. box: the mark's own viewBox. Slack, WhatsApp and Notion came
+// after (the user, 2026-11-14); the shapes of the last two are those of simple-icons 13.21.0.
+const SIGN: Record<string, { box: [number, number, number, number]; mark: ReactNode }> = {
+  mail: {
+    box: [52, 42, 88, 66],
+    mark: (
+      <>
+        <path fill="#4285f4" d="M58 108h14V74L52 59v43c0 3.32 2.69 6 6 6" />
+        <path fill="#34a853" d="M120 108h14c3.32 0 6-2.69 6-6V59l-20 15" />
+        <path fill="#fbbc04" d="M120 48v26l20-15v-8c0-7.42-8.47-11.65-14.4-7.2" />
+        <path fill="#ea4335" d="M72 74V48l24 18 24-18v26L96 92" />
+        <path fill="#c5221f" d="M52 51v8l20 15V48l-5.6-4.2c-5.94-4.45-14.4-.22-14.4 7.2" />
+      </>
+    ),
+  },
+  calendar: {
+    box: [0, 0, 200, 200],
+    mark: (
+      <>
+        <path fill="#fff" d="M152.637 47.363H47.363v105.273h105.273z" />
+        {/* the styles of the dots' names would take this number's size and colour: its own style wins */}
+        <text x={100} y={131} textAnchor="middle" style={{ fontSize: 88, fontWeight: 700, fill: '#1a73e8', stroke: 'none' }}>
+          31
+        </text>
+        <path fill="#ea4335" d="M152.637 200L200 152.637h-47.363z" />
+        <path fill="#34a853" d="M152.637 152.637H47.363V200h105.273z" />
+        <path fill="#188038" d="M0 152.637v31.576A15.788 15.788 0 0 0 15.788 200h31.576v-47.363z" />
+        <path fill="#fbbc04" d="M200 47.363h-47.363v105.273H200z" />
+        <path fill="#1967d2" d="M200 47.363V15.788A15.785 15.785 0 0 0 184.212 0h-31.576v47.363z" />
+        <path fill="#4285f4" d="M152.637 0H15.788A15.785 15.785 0 0 0 0 15.788v136.849h47.363V47.363h105.273z" />
+      </>
+    ),
+  },
+  Slack: {
+    box: [0, 0, 54, 54],
+    mark: (
+      <>
+        <path fill="#36c5f0" d="M19.712.133a5.381 5.381 0 0 0-5.376 5.387 5.381 5.381 0 0 0 5.376 5.386h5.376V5.52A5.381 5.381 0 0 0 19.712.133m0 14.365H5.376A5.381 5.381 0 0 0 0 19.884a5.381 5.381 0 0 0 5.376 5.387h14.336a5.381 5.381 0 0 0 5.376-5.387 5.381 5.381 0 0 0-5.376-5.386" />
+        <path fill="#2eb67d" d="M53.76 19.884a5.381 5.381 0 0 0-5.376-5.386 5.381 5.381 0 0 0-5.376 5.386v5.387h5.376a5.381 5.381 0 0 0 5.376-5.387m-14.336 0V5.52A5.381 5.381 0 0 0 34.048.133a5.381 5.381 0 0 0-5.376 5.387v14.364a5.381 5.381 0 0 0 5.376 5.387 5.381 5.381 0 0 0 5.376-5.387" />
+        <path fill="#ecb22e" d="M34.048 54a5.381 5.381 0 0 0 5.376-5.387 5.381 5.381 0 0 0-5.376-5.386h-5.376v5.386A5.381 5.381 0 0 0 34.048 54m0-14.365h14.336a5.381 5.381 0 0 0 5.376-5.386 5.381 5.381 0 0 0-5.376-5.387H34.048a5.381 5.381 0 0 0-5.376 5.387 5.381 5.381 0 0 0 5.376 5.386" />
+        <path fill="#e01e5a" d="M0 34.249a5.381 5.381 0 0 0 5.376 5.386 5.381 5.381 0 0 0 5.376-5.386v-5.387H5.376A5.381 5.381 0 0 0 0 34.25m14.336-.001v14.364A5.381 5.381 0 0 0 19.712 54a5.381 5.381 0 0 0 5.376-5.387V34.25a5.381 5.381 0 0 0-5.376-5.387 5.381 5.381 0 0 0-5.376 5.387" />
+      </>
+    ),
+  },
+  WhatsApp: {
+    box: [0, 0, 24, 24],
+    mark: (
+      <>
+        <path fill="#25d366" d="M20.464 3.488A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+        <path fill="#fff" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347" />
+      </>
+    ),
+  },
+  Notion: {
+    box: [0, 0, 24, 24],
+    mark: (
+      <>
+        {/* the white page, then the mark's black lines on it: on this dark card the mark alone is a hole */}
+        <path fill="#fff" d="M1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z" />
+        <path fill="#000" d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z" />
+      </>
+    ),
+  },
 }
 
 type P = { x: number; y: number; vx: number; vy: number }
@@ -133,10 +194,11 @@ export function Memory({ className = '', detail = false, children }: { className
   }, [detail, activity?.turn, processing, touched, brain])
   const holds = useMemo(() => new Set((brain?.nodes ?? []).map((n) => n.in)), [brain])
   const shown = useMemo(() => {
-    const nodes = (brain?.nodes ?? []).filter((n) => detail || !n.in || open.has(n.in))
+    // a dot inside a closed dot shows when the agent looks at it: the line of a day that recall found
+    const nodes = (brain?.nodes ?? []).filter((n) => detail || !n.in || open.has(n.in) || !!sense?.about.includes(n.id))
     const ids = new Set(nodes.map((n) => n.id))
     return { nodes, links: (brain?.links ?? []).filter(([a, b]) => ids.has(a) && ids.has(b)) }
-  }, [brain, open, detail])
+  }, [brain, open, detail, sense])
   // the satellites of the detailed picture: small, near their dot, and they push less
   const sat = useMemo(() => new Set(detail ? (brain?.nodes ?? []).filter((n) => n.in).map((n) => n.id) : []), [brain, detail])
 
@@ -174,6 +236,12 @@ export function Memory({ className = '', detail = false, children }: { className
     let raf = 0
     const ps = shown.nodes.map((n) => p.get(n.id)!)
     const push = shown.nodes.map((n) => (sat.has(n.id) ? 0.2 : 1))
+    // A name is wide and low, so two dots at one height need more room than the push gives them.
+    // half: half the width of a dot's name (a letter is about 6.6 px wide), 0 for one with no name.
+    // tall: a dot and the name under it. Measured 2026-11-14 with five sources: 1 to 3 names of the
+    // Live card lay on another name or on a mark at each of three window sizes, and none after.
+    const half = shown.nodes.map((n) => (sat.has(n.id) ? 0 : Math.max(12, name(n).length * 3.3) / scale))
+    const tall = 30 / scale
     const tick = () => {
       for (let i = 0; i < ps.length; i++) {
         for (let j = i + 1; j < ps.length; j++) {
@@ -185,6 +253,12 @@ export function Memory({ className = '', detail = false, children }: { className
           ps[i].vy += dy * f
           ps[j].vx -= dx * f
           ps[j].vy -= dy * f
+          // two names on each other, or a name on a dot: the upper one goes up and the lower one down
+          const over = half[i] && half[j] ? Math.min(half[i] + half[j] - Math.abs(dx), tall - Math.abs(dy)) : 0
+          if (over > 0) {
+            ps[i].vy += 0.5 * over * (dy < 0 ? -1 : 1)
+            ps[j].vy -= 0.5 * over * (dy < 0 ? -1 : 1)
+          }
         }
       }
       for (const [a, b] of shown.links) {
@@ -281,8 +355,8 @@ export function Memory({ className = '', detail = false, children }: { className
             // The detailed picture has small dots: more of them fit, and the lines show
             const links = Math.sqrt(near.get(n.id)?.size ?? 0)
             const sign = SIGN[n.kind === 'source' ? n.id : n.kind === 'item' ? n.id.split('/')[0] : '']
-            const big = n.kind === 'source' ? 1.5 : 1 // the tool itself is larger than what came from it
-            const r = sign ? 7 * big : sat.has(n.id) ? 2.2 : detail ? (n.kind === 'person' ? 6 : 2.6 + 0.9 * links) : n.kind === 'person' ? 7 : 3 + 1.4 * links
+            const wide = n.kind === 'source' ? 20 : 13 // px: the tool itself is larger than what came from it
+            const r = sign ? wide / 2 : sat.has(n.id) ? 2.2 : detail ? (n.kind === 'person' ? 6 : 2.6 + 0.9 * links) : n.kind === 'person' ? 7 : 3 + 1.4 * links
             const more = !detail && holds.has(n.id)
             // a satellite has its name only while the pointer or the zoom is on it: a hundred names
             // at once are no picture, and a day's twelve lie on each other
@@ -310,9 +384,9 @@ export function Memory({ className = '', detail = false, children }: { className
                 {matched ? <circle className={`touched ${processing ? 'active' : ''}`} cx={x} cy={y} r={r + 5} stroke={COLOR[n.kind]} /> : null}
                 {sign ? (
                   <>
-                    {/* the card's colour behind the sign: no line runs through it */}
+                    {/* the card's colour behind the mark: no line runs through it */}
                     <circle className="tool" cx={x} cy={y} r={r + 2} />
-                    <path className="dot" d={sign} transform={`translate(${x} ${y}) scale(${big})`} fill="none" stroke={COLOR[n.kind]} strokeWidth={1.3 / big} strokeLinejoin="round" strokeLinecap="round" />
+                    <g transform={`translate(${x - ((sign.box[0] + sign.box[2] / 2) * wide) / sign.box[2]} ${y - ((sign.box[1] + sign.box[3] / 2) * wide) / sign.box[2]}) scale(${wide / sign.box[2]})`}>{sign.mark}</g>
                   </>
                 ) : (
                   <circle className="dot" cx={x} cy={y} r={r} fill={COLOR[n.kind]} />

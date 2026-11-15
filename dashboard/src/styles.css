@@ -1050,7 +1050,10 @@ button.on {
   stroke: var(--text);
   stroke-width: 1.5px;
 }
-/* behind the sign of a connected tool: the card's colour */
+.memory .view > g:focus-visible > text {
+  fill: var(--text); /* a tool's mark has no edge to turn white: its name does */
+}
+/* behind the mark of a connected tool: the card's colour */
 .memory .tool {
   fill: var(--surface);
 }
