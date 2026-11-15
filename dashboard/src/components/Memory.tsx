@@ -165,9 +165,6 @@ export function Memory({ className = '', detail = false, children }: { className
   }, [scale])
   const [, setFrame] = useState(0)
   const [hot, setHot] = useState<string | null>(null)
-  // a dot can hold more dots (in): a day holds what was said on it. A click opens and closes it.
-  const [open, setOpen] = useState<ReadonlySet<string>>(new Set())
-  const toggle = (id: string) => setOpen((o) => new Set(o.has(id) ? [...o].filter((x) => x !== id) : [...o, id]))
   // A click on a dot brings it near: the picture grows about it. A second click on it, or a click
   // beside the dots, goes back to the whole picture.
   const [zoomed, setZoomed] = useState<string | null>(null)
@@ -192,13 +189,10 @@ export function Memory({ className = '', detail = false, children }: { className
       setZoomed(match.id)
     }
   }, [detail, activity?.turn, processing, touched, brain])
-  const holds = useMemo(() => new Set((brain?.nodes ?? []).map((n) => n.in)), [brain])
-  const shown = useMemo(() => {
-    // a dot inside a closed dot shows when the agent looks at it: the line of a day that recall found
-    const nodes = (brain?.nodes ?? []).filter((n) => detail || !n.in || open.has(n.in) || !!sense?.about.includes(n.id))
-    const ids = new Set(nodes.map((n) => n.id))
-    return { nodes, links: (brain?.links ?? []).filter(([a, b]) => ids.has(a) && ids.has(b)) }
-  }, [brain, open, detail, sense])
+  // Every dot is shown, also one that is inside another (in): what was said on a day, and the lines
+  // under a note or an item. They were hidden until a click, and the picture looked too empty (the
+  // user's rule, 2026-11-14).
+  const shown = useMemo(() => ({ nodes: brain?.nodes ?? [], links: brain?.links ?? [] }), [brain])
   // the satellites of the detailed picture: small, near their dot, and they push less
   const sat = useMemo(() => new Set(detail ? (brain?.nodes ?? []).filter((n) => n.in).map((n) => n.id) : []), [brain, detail])
 
@@ -318,7 +312,6 @@ export function Memory({ className = '', detail = false, children }: { className
   const click = (id: string) => {
     manualTurn.current = activity?.turn
     setFeatured(null)
-    if (!detail && holds.has(id)) toggle(id) // the detailed picture has every dot open
     setZoomed((z) => (z === id ? null : id))
   }
 
@@ -352,26 +345,24 @@ export function Memory({ className = '', detail = false, children }: { className
             const x = q.x * scale
             const y = q.y * scale
             const matched = touched.has(n.id)
-            // near counts the dots inside too: a dot that holds much is big, also while it is closed.
+            // near counts the dots inside too: a dot that holds much is big.
             // The detailed picture has small dots: more of them fit, and the lines show
             const links = Math.sqrt(near.get(n.id)?.size ?? 0)
             const sign = SIGN[n.kind === 'source' ? n.id : n.kind === 'item' ? n.id.split('/')[0] : '']
             const wide = n.kind === 'source' ? 20 : 13 // px: the tool itself is larger than what came from it
             const r = sign ? wide / 2 : sat.has(n.id) ? 2.2 : detail ? (n.kind === 'person' ? 6 : 2.6 + 0.9 * links) : n.kind === 'person' ? 7 : 3 + 1.4 * links
-            const more = !detail && holds.has(n.id)
             // a satellite has its name only while the pointer or the zoom is on it: a hundred names
             // at once are no picture, and a day's twelve lie on each other
             const label = !sat.has(n.id) || matched || n.id === hot || n.id === zoomed ? name(n) : ''
             return (
               <g
                 key={n.id}
-                className={`${n.kind === 'source' ? 'head' : n.kind} ${lit(n.id) ? '' : 'dim'} ${more ? 'more' : ''}`}
+                className={`${n.kind === 'source' ? 'head' : n.kind} ${lit(n.id) ? '' : 'dim'}`}
                 onMouseEnter={() => setHot(n.id)}
                 onMouseLeave={() => setHot(null)}
                 role="button"
                 tabIndex={0}
                 aria-label={n.label}
-                aria-expanded={more ? open.has(n.id) : undefined}
                 onClick={(e) => {
                   e.stopPropagation() // the picture's own click goes back to the whole picture
                   click(n.id)
