@@ -1,7 +1,16 @@
 # Calendar. Mock data: made-up events, not a real account. agent/brain.py sources() reads this file.
 - 2026-11-14 18:00 Demo video and DevPost are due
+  - the video is two minutes at most
+  - the README and the link go on DevPost
 - 2026-11-14 20:00 Finals: the pitch to the judges
+  - three minutes on the stage, then questions
+  - Julia shows the band, I talk
 - 2026-11-15 09:30 Call with the investor
+  - the second call: she asked for it after the first one
+  - she wants the deck and the numbers
 - 2026-11-15 14:00 Dentist
+  - the check that was moved twice
 - 2026-11-16 08:15 Flight home
+  - leave for the airport at 06:00
 - 2026-11-17 Rent is due
+  - the last rent for the old flat

@@ -61,7 +61,7 @@ search again.
 
 The lower part of the **Memory** card in the Live tab shows what the band's microphone hears as
 text, while people speak, and what the agent answers: one line, the newest. The agent listens
-while the **Demo** switch in the top bar is on (see Agent). The sound goes over the internet to Deepgram, a company: tell
+while the **Demo** switch in the Memory card's title line is on (see Agent). The sound goes over the internet to Deepgram, a company: tell
 the people near the band first, and switch the demo off when someone asks. The band's
 light is solid blue while the microphone is on. With `./run.sh --sim` the pretend band plays a
 recording of a person reading a fable, so the transcript can be tried with the keys and no band.
@@ -74,7 +74,7 @@ the band must know that too.
 
 ## Agent
 
-The **Demo** switch in the top bar starts and ends the voice loop. While it is off, the band's
+The **Demo** switch in the Memory card's title line starts and ends the voice loop. While it is off, the band's
 microphone is off and nothing reacts to what you say. The agent
 does not ask how the day was: it knows the day from what the band heard, and speaks from that.
 The band's microphone hears what you say back,
@@ -115,6 +115,10 @@ checking sensors. Returned nodes and their graph connections light up while a re
 pending; the animation stops at a response, silence, error or disconnect. These are observed
 tool calls and retrieved matches, not private model reasoning or proof that every match was
 used in the answer. Parallel calls appear together. Starting a new turn clears old activity.
+In Focus, a recalled statement lights up with its parent day and their existing connections;
+other statements of the day remain dim. Matches outside the graph's last-12-lines limit light
+up the day instead. Status stays beside the Demo switch, so the graph does not resize between
+steps. Zoom remains manual. Completed steps are available in the status tooltip.
 
 The band hears the Mac's speaker, so the agent does not listen while it speaks: you cannot
 interrupt it.
@@ -151,7 +155,9 @@ a demo, and delete the folder when the band has been worn for real weeks.
 
 The **Memory** card in the Live tab draws all of it as a graph: a dot for each note, each day and
 each calendar or mail item, and a line from a note or an item to the days it names. Point at a
-dot to read it. A hand edit shows after a reload of the page.
+dot to read it. A connected tool and what came from it have a small sign in place of the dot: an
+envelope for the mail, a calendar page for the calendar. A click on a dot brings it near: the picture grows about it, and a second click,
+or a click beside the dots, goes back. A hand edit shows after a reload of the page.
 
 ### Sleep
 
@@ -172,6 +178,11 @@ is a stripe over every frequency. Zoomed all the way out the graph is a night of
 hours still to come are empty tracks. A pinch, or Cmd and a scroll, zooms; a sideways swipe pans;
 a click follows, with now in the middle, and a second click goes back to the night. No view goes
 back before the start of the night.
+
+The **Focus** tab shows only how the agent works: the picture of the Memory card in detail, as
+large as the screen, with the one line of words under it, and no device over it. The dots are
+small there, and what a day or an item holds is a ring of smaller dots around it. The numbers and charts of
+each single device are in the **Debug** tab, one long page.
 
 **The first four hours of that night are made up, for the demo.** The page opens in the middle of
 a night that began at 00:00: two cycles of sleep, and two moments in them (one with movement and

@@ -4,13 +4,32 @@ import { useMuse } from '../lib/muse'
 import { usePolar } from '../lib/polar'
 import type { LinkState } from '../lib/sse'
 import { Panel, Seg, hms } from '../components/Panel'
+import { BandTab } from './BandTab'
+import { MuseTab } from './MuseTab'
+import { PolarTab } from './PolarTab'
 
 type Prog = 'band' | 'muse' | 'polar'
 const NAME: Record<Prog, string> = { band: 'Band', muse: 'Muse', polar: 'Polar' }
 
+// Everything that is about one device and not about the person, as one long page with no tabs in
+// it (the user's rule, 2026-11-14): the programs' health, then each device's own numbers and charts.
+export function DebugTab() {
+  return (
+    <main>
+      <Programs />
+      <h2 className="part">Band</h2>
+      <BandTab />
+      <h2 className="part">Muse</h2>
+      <MuseTab />
+      <h2 className="part">Polar</h2>
+      <PolarTab />
+    </main>
+  )
+}
+
 // Every number that says why something is not working: each program's link history and the three
 // event logs in one timeline.
-export function DebugTab() {
+function Programs() {
   const bd = useBand()
   const mu = useMuse()
   const po = usePolar()
@@ -73,7 +92,7 @@ export function DebugTab() {
   }
 
   return (
-    <main className="grid">
+    <div className="grid">
       <Panel
         title="Programs"
         className="span12"
@@ -130,6 +149,6 @@ export function DebugTab() {
           {events.length ? null : <div className="none">No events</div>}
         </div>
       </Panel>
-    </main>
+    </div>
   )
 }

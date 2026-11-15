@@ -324,7 +324,11 @@ class Voice(LiveServer):
         """
         async with self.activity.tool("recall"):
             found = brain.recall(words.split(), self.day)
-            self.touch(list(dict.fromkeys(day for day, _ in found)))
+            visible = {n["id"] for n in brain.graph()["nodes"]}
+            # Focus now shows individual statements. Highlight only the returned statements;
+            # older lines outside the graph's last-12 limit can still identify their day.
+            self.touch(list(dict.fromkeys(f"{day}/{line}" if f"{day}/{line}" in visible else day
+                                          for day, line in found)))
             today = datetime.date.fromisoformat(self.day)
             await params.result_callback("\n".join(
                 f"{day} ({(today - datetime.date.fromisoformat(day)).days} days ago) {line}" for day, line in found)

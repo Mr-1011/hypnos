@@ -84,21 +84,31 @@ def recall(words, before):
 def graph():
     """The brain as nodes and links, for the page: the person, the headings of the notes and their
     lines, the connected sources and their items, and the days. A line or an item that names a
-    date is linked to that day."""
+    date is linked to that day. A dot with "in" is inside another dot, and the page shows it when
+    that one is opened: what was said on a day, and the indented lines under a note or an item."""
     nodes = {"person": {"id": "person", "label": "the person", "kind": "person"}}
     links = []
-    for day in sorted(days()):
+    for day, f in sorted(days().items()):
         nodes[day] = {"id": day, "label": day, "kind": "day"}
         links.append(["person", day])
+        # shortcut: the last 12 lines of a day, so that a whole day of speech does not go out with
+        # every state; let the page ask for one day's lines when a day must show all of them.
+        for said in [x[2:] for x in f.read_text().splitlines() if x.startswith("- ")][-12:]:
+            nodes[f"{day}/{said}"] = {"id": f"{day}/{said}", "label": said.replace("**", ""), "kind": "said", "in": day}
+            links.append([day, f"{day}/{said}"])
     for hub, leaf, doc in [("head", "line", notes())] + [("source", "item", f"## {name}\n{text}") for name, text in sources().items()]:
-        head = None
+        head = top = None
         for line in doc.splitlines():
             text = line.strip().lstrip("-* ").strip()
             if line.startswith("## "):
-                head = line[3:].strip()
+                head, top = line[3:].strip(), None
                 nodes[head] = {"id": head, "label": head, "kind": hub}
                 links.append(["person", head])
+            elif top and text and line[:1].isspace():  # an indented line: more about the one above it
+                nodes[f"{top}/{text}"] = {"id": f"{top}/{text}", "label": text, "kind": "detail", "in": top}
+                links.append([top, f"{top}/{text}"])
             elif head and text and not line.startswith("#"):
+                top = f"{head}/{text}"
                 nodes[f"{head}/{text}"] = {"id": f"{head}/{text}", "label": text, "kind": leaf}
                 links.append([head, f"{head}/{text}"])
                 for day in set(re.findall(r"\d{4}-\d{2}-\d{2}", text)):

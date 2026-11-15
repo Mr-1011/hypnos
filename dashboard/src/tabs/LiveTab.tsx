@@ -13,7 +13,7 @@ const TRACE = 180 // px, the height of each of the three trace panels; 5 EEG lan
 
 // Every device at once, on one screen (styles.css, "the Live tab"): how awake the person is beside
 // what the agent remembers and what was said, then the wrist, the brain and the heart on the same
-// seconds. The numbers, the slow charts and the health of each device are on its own tab.
+// seconds. The numbers, the slow charts and the health of each device are in the Debug tab.
 export function LiveTab() {
   const [seconds, setSeconds] = useState<'5' | '10' | '20'>('10')
 

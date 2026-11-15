@@ -76,13 +76,12 @@ select:focus-visible {
   background: var(--bg);
   border-bottom: 1px solid var(--line);
 }
-/* the Demo switch, at the right end of the top bar */
+/* the Demo switch, in the Memory card's title line */
 .demo {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-left: auto;
-  font-size: 13px;
+  gap: 8px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text-2);
 }
@@ -92,10 +91,14 @@ select:focus-visible {
   gap: 10px;
   flex-wrap: wrap;
 }
+/* the name in capitals set wide, as cut into stone (the user's rule, 2026-11-14). Not the
+   thinnest cut: that was too thin beside the rest of the page */
 h1 {
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: 0.01em;
+  font-family: 'Avenir Next', Avenir, 'Helvetica Neue', sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
 }
 .pill {
   display: inline-flex;
@@ -168,7 +171,7 @@ h1 {
   }
 }
 
-/* ---------- the Live tab: one screen ---------- */
+/* ---------- the Live tab and the Focus tab: one screen ---------- */
 /* The top bar, the cards and the traces keep their height. The row of the Sleep State graph and the
    Memory card takes what is left: the graph and the Memory picture fill it, the transcript keeps
    its one line. A narrow or low window gets the ordinary scrolling page: there the row would be
@@ -202,6 +205,47 @@ h1 {
   .app.fit .course {
     min-height: 0;
   }
+  /* the Focus tab has one row: the Memory card takes all of the screen that is left */
+  .app.fit .grid.focus {
+    grid-template-rows: minmax(0, 1fr);
+  }
+}
+/* The Focus tab: only the picture and the words (the user's rule, 2026-11-14). The card has no
+   frame, only its title line with the Demo switch, and the words are in the middle, large enough
+   to read from further away. */
+.focus .panel {
+  border: none;
+  background: none;
+}
+.focus .panel > header {
+  border-bottom: none;
+}
+.focus .talk {
+  justify-content: center;
+  height: 56px;
+  padding: 14px 16px;
+  border-top: none;
+  font-size: 20px;
+  line-height: 28px;
+}
+/* the detailed picture: its names are a little larger than in the card, and each has an edge in
+   the page's colour, so a line that runs behind a name does not cross it out */
+.focus .memory text {
+  font-size: 11px;
+  paint-order: stroke;
+  stroke: var(--bg);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+.focus .memory g.person text,
+.focus .memory g.head text {
+  font-size: 13px;
+}
+.focus .memory-said {
+  border-top: none;
+  background: var(--bg);
+  font-size: 16px;
+  text-align: center;
 }
 
 .panel {
@@ -246,6 +290,12 @@ h2 {
 }
 .seg {
   display: inline-flex;
+}
+/* the Debug tab's parts: the name of a device over its panels */
+.part {
+  margin-top: 28px;
+  font-size: 13px;
+  color: var(--text);
 }
 .seg button {
   height: 24px;
@@ -691,9 +741,9 @@ canvas {
 
 /* ---------- tabs ---------- */
 /* in the top bar, as high as the bar: the line under the open tab lies on the bar's own line */
+/* at the right end of the top bar (the user's rule, 2026-11-14) */
 .tabs {
   display: flex;
-  flex: 1;
   align-self: stretch;
   gap: 2px;
   margin-bottom: -1px;
@@ -975,6 +1025,10 @@ button.on {
   stroke: var(--line-strong);
   stroke-width: 1;
 }
+/* the line to a satellite of the detailed picture: fainter than a line between two notes */
+.memory line.in {
+  stroke: var(--line);
+}
 .memory line.hot {
   stroke: var(--text-2);
 }
@@ -985,6 +1039,28 @@ button.on {
 .memory g {
   cursor: default;
   transition: opacity 0.15s;
+}
+/* a click on a dot brings it near, and opens one that holds more dots. The browser's box around
+   a dot that has the focus is not drawn (the user's rule, 2026-11-14): the dot gets a white edge */
+.memory .view > g {
+  cursor: pointer;
+  outline: none;
+}
+.memory .view > g:focus-visible .dot {
+  stroke: var(--text);
+  stroke-width: 1.5px;
+}
+/* behind the sign of a connected tool: the card's colour */
+.memory .tool {
+  fill: var(--surface);
+}
+.focus .memory .tool {
+  fill: var(--bg);
+}
+/* the picture grows about the dot in half a second, and stops with no bounce */
+.memory .view {
+  transform-origin: 0 0;
+  transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 .memory text {
   font-size: 9px;
@@ -1023,19 +1099,14 @@ button.on {
 }
 .memory circle.touched.active { animation: touched 1.6s ease-in-out infinite; }
 .memory line.retrieved { stroke: #c47ad9; stroke-width: 1.8; }
-.memory line.retrieved.active { stroke-dasharray: 5 5; animation: memory-flow 1.6s linear infinite; }
-.memory-phase { font-size: 11px; color: var(--text-3); }
+.memory line.retrieved.active { animation: memory-link 2.4s ease-in-out infinite; }
+.memory-phase { font-size: 11px; color: var(--text-3); max-width: 42vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .memory-phase.active { color: #c47ad9; }
-.memory-activity { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px; flex-shrink: 0; }
-.activity-step { font-size: 10px; color: var(--text-3); border: 1px solid var(--line); border-radius: 12px; padding: 3px 7px; }
-.activity-step > span:first-child { margin-right: 4px; }
-.activity-step.running { color: #e2b8f0; border-color: #c47ad9; }
-.activity-step.done { color: var(--text-2); }
-.activity-step.failed { color: #f0a18c; }
-.activity-result { font-size: 9px; }
-@keyframes memory-flow { to { stroke-dashoffset: -20; } }
+.memory-phase.active::before { content: ''; display: inline-block; width: 5px; height: 5px; margin-right: 7px; border-radius: 50%; background: currentColor; animation: touched 2.4s ease-in-out infinite; }
+.focus .memory-phase { font-size: 12px; }
+@keyframes memory-link { 50% { stroke-opacity: 0.45; } }
 @media (prefers-reduced-motion: reduce) {
-  .memory circle.touched.active, .memory line.retrieved.active { animation: none; }
+  .memory circle.touched.active, .memory line.retrieved.active, .memory-phase.active::before { animation: none; }
 }
 .memory g:has(.touched) text {
   fill: var(--text);

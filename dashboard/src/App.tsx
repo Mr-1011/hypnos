@@ -1,19 +1,16 @@
 import { useEffect, useState } from 'react'
 import { DeviceCard } from './components/DeviceCard'
 import { type Tone } from './components/Panel'
-import { agent, useAgent } from './lib/agent'
+import { agent } from './lib/agent'
 import { band, bandApi, useBand } from './lib/band'
 import { course } from './lib/course'
 import { muse, museApi, useMuse } from './lib/muse'
 import { polar, polarApi, usePolar } from './lib/polar'
-import { post } from './lib/sse'
-import { BandTab } from './tabs/BandTab'
-import { MuseTab } from './tabs/MuseTab'
 import { LiveTab } from './tabs/LiveTab'
-import { PolarTab } from './tabs/PolarTab'
+import { FocusTab } from './tabs/FocusTab'
 import { DebugTab } from './tabs/DebugTab'
 
-const TABS = ['Live', 'Band', 'Muse', 'Polar', 'Debug'] as const
+const TABS = ['Live', 'Focus', 'Debug'] as const
 type Tab = (typeof TABS)[number]
 
 function savedTab(): Tab {
@@ -85,19 +82,6 @@ function Cards() {
   )
 }
 
-// The demo: while it is on, the agent listens through the band's microphone and answers
-// (agent/voice.py, POST /api/talk). While it is off, nothing reacts to what a person says.
-function Demo() {
-  const ag = useAgent()
-  const on = !!ag.state?.on
-  return (
-    <label className="demo">
-      Demo
-      <button role="switch" aria-checked={on} aria-label="Demo" className={`switch ${on ? 'on' : ''}`} onClick={() => post('/api/agent', '/api/talk', { on: !on })} disabled={!ag.online} />
-    </label>
-  )
-}
-
 export default function App() {
   const [tab, setTab] = useState<Tab>(savedTab)
   useEffect(() => {
@@ -116,12 +100,10 @@ export default function App() {
   }, [tab])
 
   return (
-    <div className={tab === 'Live' ? 'app fit' : 'app'}>
+    <div className={tab === 'Debug' ? 'app' : 'app fit'}>
       <header className="top">
         <div className="brand">
-          <svg className="mark" viewBox="0 0 24 24" width={22} height={22} aria-hidden="true">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="#e0b64d" />
-          </svg>
+          <img className="mark" src="/logo.svg" width={28} height={28} alt="" />
           <h1>Hypnos</h1>
         </div>
         <nav className="tabs">
@@ -131,13 +113,10 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <Demo />
       </header>
-      <Cards />
+      {tab === 'Focus' ? null : <Cards />}
       {tab === 'Live' ? <LiveTab /> : null}
-      {tab === 'Band' ? <BandTab /> : null}
-      {tab === 'Muse' ? <MuseTab /> : null}
-      {tab === 'Polar' ? <PolarTab /> : null}
+      {tab === 'Focus' ? <FocusTab /> : null}
       {tab === 'Debug' ? <DebugTab /> : null}
     </div>
   )

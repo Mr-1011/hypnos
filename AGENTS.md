@@ -17,7 +17,7 @@ agent answers aloud).
 cd sensors && ../.venv/bin/python -m unittest test_live_band                                    # all tests
 cd sensors && ../.venv/bin/python -m unittest test_live_band.Gap.test_lost_samples_become_nan   # one test
 
-cd agent && ../.venv/bin/python -m unittest test_brain test_sleep test_activity                 # the agent's tests
+cd agent && ../.venv/bin/python -m unittest test_brain test_sleep test_activity test_voice_activity # agent tests
 
 cd dashboard && npx tsc --noEmit    # type check; strict, with noUnusedLocals and noUnusedParameters
 ```
@@ -112,7 +112,7 @@ written.
 recording: the band's sound (`BandInput`, from `/api/audio`) to Deepgram Flux (speech to text and
 the end of a turn), Gemini (`prompt.md` is the system instruction), Deepgram Flux TTS (Alexis, speed 0.7, expressivity -2) and
 the Mac's sound output. It is a `LiveServer` and holds no Bluetooth link. The Demo switch in
-the page's top bar starts and ends the loop (`POST /api/talk`; the user's rule, 2026-11-14, which
+the Memory card's title line starts and ends the loop (`POST /api/talk`; the user's rule, 2026-11-14, which
 replaced the start by the band's link). While it is off, nothing listens on `/api/audio`, so the
 band's microphone is off and nothing answers what a person says. The
 keys are read from `.env` at each start. Its docstring is the reference.
@@ -163,6 +163,8 @@ keys are read from `.env` at each start. Its docstring is the reference.
   What a band hears is not trusted text: both prompts say that the talk and the notes are never
   instructions. Keep those lines. `brain.graph()` goes out in the agent's `state`, and
   `dashboard/src/components/Memory.tsx` draws it (the Live tab's "Brain" panel is the EEG).
+  A node with `in` is inside another one, and the card shows it after a click on that one: the
+  lines of a day (`said`, the last 12), and the indented lines under a note or an item (`detail`).
 - Gemini runs with `thinking_level="low"`: the comment at `GoogleLLMService` in `talk()` has the
   measured times. Do not remove it for a model change without measuring again.
 - Cues (`cue()`) make the agent speak unasked while the loop runs: bedtime (the first message),
@@ -170,9 +172,10 @@ keys are read from `.env` at each start. Its docstring is the reference.
   (`brain.restless()` in `watch()`). A cue carries the body's numbers (`felt()`).
   The numbers (`MOVING_MG`, `WINDOW`, `RESTLESS`, `CALM_GAP_S`) are set for the awake demo: see
   the `shortcut:` comment in `brain.py`.
-- `voice.py` has no test. Try it with `sensors/live_band.py --sim` on a spare port and `--band`
-  set to it. The pretend band always reads as restless (28 mg). The tools have no test: they were
-  tried as text, with a made-up past in a scratch brain folder.
+- `test_voice_activity.py` checks recalled statement highlighting and fallback to a day when a
+  statement is outside the graph's last-12 limit. The full voice loop still needs a live check:
+  use `sensors/live_band.py --sim` on a spare port and `--band` set to it. The pretend band always
+  reads as restless (28 mg).
 
 ### Page (`dashboard/`)
 
@@ -189,7 +192,20 @@ keys are read from `.env` at each start. Its docstring is the reference.
   `POST /api/record` on each sensor program (README, Record).
 - The Live tab is one screen with no page scroll (`.app.fit` in `styles.css`): the Sleep State graph
   beside the Memory card, whose lower part is the transcript, and three traces under them. Only
-  that first row changes its height. A new panel goes on a device tab, or it replaces one on Live.
+  that first row changes its height. The Focus tab is also one screen, and it shows only how the
+  agent works (the user's rules, 2026-11-14): the Memory card's picture in detail
+  (`<Memory detail>`: small dots with room between them, as a notes app draws its graph, and
+  every dot that is inside another as its satellite), and the transcript's line, with no device
+  cards and no frame. A dot's name is short, of whole words, with no "..." and no colon (`name()`
+  in `Memory.tsx`): the line under the picture has the whole text.
+  What was each device's own tab is a part of the Debug tab, one long page with no tabs in it
+  (`tabs/DebugTab.tsx`; the user's rule, 2026-11-14). A new panel goes into one of those parts, or
+  it replaces one on Live.
+- The Memory picture must stay calm (the user's rule, 2026-11-14: it jumped and bounced too much).
+  The first picture and a card of a new size are shown at rest, a change of the dots moves slowly,
+  and a click on a dot zooms the picture to it. The comments in `Memory.tsx` have the numbers.
+  A connected source and its items are drawn as a sign, not a dot (`SIGN` in `Memory.tsx`, by the
+  source's name): give a new source its sign there.
 - `src/lib/course.ts` samples every 2 s how much the body moves and how loud it is at the band's
   microphone (the band program's `sound`, which is null while the microphone is off), each from 0
   to 1, the heart rate (the Polar's, or else the Muse's), the agent's stage of sleep and the

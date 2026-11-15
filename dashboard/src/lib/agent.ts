@@ -9,8 +9,9 @@ export interface BrainNode {
   id: string
   label: string
   // head and line: a heading of the notes and a note. source and item: what the agent is connected
-  // to (calendar, mail) and an entry of it
-  kind: 'person' | 'head' | 'line' | 'day' | 'source' | 'item'
+  // to (calendar, mail) and an entry of it. said: a line of a day. detail: more about a note or an item
+  kind: 'person' | 'head' | 'line' | 'day' | 'source' | 'item' | 'said' | 'detail'
+  in?: string // the dot this one is inside: it shows only while that dot is open
 }
 
 export interface AgentState {
