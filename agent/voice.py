@@ -505,6 +505,13 @@ class Voice(LiveServer):
         except Exception as e:  # a pipeline that dies must leave the switch off and say why
             self.err = str(e) or type(e).__name__
         self.worker = None
+        if self.demo == "david":
+            # Demo off puts the scene back (the user's rule, 2026-11-14): no line, ring or zoom of the
+            # take that ended stays on the page. The page's zoom goes back at another turn number,
+            # and a new Activity has one.
+            prepare_david()
+            self.lines.clear()
+            self.sensed, self.activity = None, Activity(self.push_state)
         self.activity.finish("error" if self.err else "idle")
         if not self.demo and brain.day_text(self.day):
             try:

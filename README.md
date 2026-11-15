@@ -55,9 +55,10 @@ not hear the actor. The usual Deepgram and Google keys are required.
 Open **Focus**, link the team's band, then switch **Demo** on. The header says **David demo**.
 The agent waits for speech. Say **“Oh no, I can't”**, **“I'll let them down”**, or speak naturally
 near the band, then pause to end the turn. After the agent's answer the take hears nothing
-more, so you can talk while you film: switch Demo off and on for the next take. Every speech
-turn runs a context lookup before Gemini responds, in both normal and David mode. Relevant
-earlier experiences are searched with `recall`; the graph follows the actual returned facts.
+more, so you can talk while you film. Demo off puts the scene back: the transcript is empty and
+the picture is whole again. Demo on starts the next take. Every speech turn runs a context
+lookup before Gemini responds, in both normal and David mode. Relevant earlier experiences are
+searched with `recall`; the graph follows the actual returned facts.
 
 The David profile includes a worked example connecting tomorrow's pitch, his worry, Maya's
 confirmed participation and a helpful earlier experience to **“You and Maya are a team.”**

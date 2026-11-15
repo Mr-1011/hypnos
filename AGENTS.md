@@ -202,7 +202,9 @@ keys are read from `.env` at each start. Its docstring is the reference.
   the header David demo, and keep actual sleep readings. Normal memory is untouched.
   After the agent's first words a David take hears nothing more (`BandInput(once=True)`; the
   user's rule, 2026-11-14: talk in the room while the video is filmed must start no second
-  answer). The next switch-on of Demo is a new take, and it listens again.
+  answer). The next switch-on of Demo is a new take, and it listens again. Demo off puts the
+  scene back at once (the user's rule, 2026-11-14): a new take folder, no lines, no rings, and a
+  new `Activity`, whose other turn number takes the page's zoom back.
   The template `agent/demo/david/` also holds more of David's world, so that the Memory picture
   is full (the user's rule, 2026-11-14): `days/<n>.md` is the day n days before today, and
   `sources/` his other tools. Only the line with Maya may tell of a time that went well: `recall`

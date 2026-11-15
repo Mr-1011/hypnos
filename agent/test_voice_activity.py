@@ -47,3 +47,18 @@ class RecallActivity(unittest.IsolatedAsyncioTestCase):
             voice.day = "2026-11-14"
             await voice.recall(SimpleNamespace(result_callback=AsyncMock()), "presentation")
             self.assertEqual(voice.sensed["about"], ["2026-11-12"])
+
+
+class Reset(unittest.IsolatedAsyncioTestCase):
+    async def test_demo_off_puts_the_david_scene_back(self):
+        runner = SimpleNamespace(add_workers=AsyncMock(), run=AsyncMock())
+        with patch("voice.prepare_david") as fresh, patch("voice.PipelineRunner", return_value=runner), \
+                patch.object(Voice, "push_state"):
+            voice = Voice("", {}, demo="david")
+            voice.lines.append([0, "agent", "You and Maya are a team."])
+            voice.sensed = {"about": ["2026-10-17"], "worried": 0}
+            voice.activity.begin()
+            await voice.run_loop()
+            self.assertEqual((list(voice.lines), voice.sensed), ([], None))
+            self.assertEqual(voice.activity.state(), {"turn": 0, "phase": "idle", "steps": []})
+            self.assertEqual(fresh.call_count, 2)  # at the start, and a new take folder when the loop ends
