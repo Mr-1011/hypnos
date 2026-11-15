@@ -10,6 +10,13 @@ and you talk while you fall asleep. Built at VexoHacks, 2026-11-14. A prototype,
 This repo so far: the live dashboard for the three sensors, the band's microphone as text, and the
 voice loop (the band hears you, an agent answers with a soft voice).
 
+<p align="center">
+  <img src="docs/assets/dashboard.png" alt="The Live tab: the device cards, the Sleep State graph, the Memory graph with the agent's answer, and the traces of wrist, brain and heart" width="100%" />
+</p>
+
+The Live tab during the David demo. The Memory graph holds fictional facts, and the first four
+hours of the Sleep State graph are made up (see Sleep). The bottom row comes from the sensors.
+
 | Sensor | What it gives | Program | Port |
 |---|---|---|---|
 | Vexo band (wrist) | acceleration, turning, gestures, steps, battery, signal, microphone as text | `sensors/live_band.py` | 5303 |
