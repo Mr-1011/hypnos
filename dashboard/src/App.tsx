@@ -24,7 +24,7 @@ function savedTab(): Tab {
 
 const tone = (bad: boolean, warn: boolean): Tone => (bad ? 'bad' : warn ? 'warn' : '')
 
-function Cards() {
+function Cards({ detail }: { detail: boolean }) {
   const bd = useBand()
   const mu = useMuse()
   const po = usePolar()
@@ -41,6 +41,7 @@ function Cards() {
     <div className="cards">
       <DeviceCard
         title="Vexo band"
+        detail={detail}
         online={bd.online}
         st={bd.state}
         api={bandApi}
@@ -54,6 +55,7 @@ function Cards() {
       />
       <DeviceCard
         title="Muse S"
+        detail={detail}
         online={mu.online}
         st={mu.state}
         api={museApi}
@@ -67,6 +69,7 @@ function Cards() {
       />
       <DeviceCard
         title="Polar H10"
+        detail={detail}
         online={po.online}
         st={po.state}
         api={polarApi}
@@ -114,7 +117,7 @@ export default function App() {
           ))}
         </nav>
       </header>
-      {tab === 'Focus' ? null : <Cards />}
+      {tab === 'Focus' ? null : <Cards detail={tab === 'Debug'} />}
       {tab === 'Live' ? <LiveTab /> : null}
       {tab === 'Focus' ? <FocusTab /> : null}
       {tab === 'Debug' ? <DebugTab /> : null}
