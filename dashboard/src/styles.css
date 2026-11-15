@@ -1044,6 +1044,13 @@ button.on {
 .memory .view > g {
   cursor: pointer;
 }
+/* behind the sign of a connected tool: the card's colour */
+.memory .tool {
+  fill: var(--surface);
+}
+.focus .memory .tool {
+  fill: var(--bg);
+}
 /* the picture grows about the dot in half a second, and stops with no bounce */
 .memory .view {
   transform-origin: 0 0;

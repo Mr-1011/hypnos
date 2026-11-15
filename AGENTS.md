@@ -196,6 +196,8 @@ keys are read from `.env` at each start. Its docstring is the reference.
 - The Memory picture must stay calm (the user's rule, 2026-11-14: it jumped and bounced too much).
   The first picture and a card of a new size are shown at rest, a change of the dots moves slowly,
   and a click on a dot zooms the picture to it. The comments in `Memory.tsx` have the numbers.
+  A connected source and its items are drawn as a sign, not a dot (`SIGN` in `Memory.tsx`, by the
+  source's name): give a new source its sign there.
 - `src/lib/course.ts` samples every 2 s how much the body moves and how loud it is at the band's
   microphone (the band program's `sound`, which is null while the microphone is off), each from 0
   to 1, the heart rate (the Polar's, or else the Muse's), the agent's stage of sleep and the

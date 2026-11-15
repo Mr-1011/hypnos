@@ -6,6 +6,15 @@ import { Panel } from './Panel'
 const COLOR: Record<BrainNode['kind'], string> = { person: '#f3f4f6', head: '#e0b64d', line: '#c47ad9', day: '#4c9be8', source: '#19d18d', item: '#5fbf9f', said: '#8fbdf0', detail: '#9bd8c2' }
 const NAME: Record<BrainNode['kind'], string> = { person: 'the person', head: 'a part of the notes', line: 'a note', day: 'a day', source: 'connected', item: 'from a connected source', said: 'that day', detail: 'more about it' }
 
+// A connected tool has its sign in place of a dot, and so has each thing that came from it: an
+// envelope for the mail, a page of a calendar for the calendar (the user's rule, 2026-11-14). The
+// key is the source's name (agent/brain.py sources()); one with no sign here stays a dot. Each is
+// drawn about 0 0 in a box of 12.
+const SIGN: Record<string, string> = {
+  mail: 'M-6 -4.5h12v9h-12z M-6 -4.5l6 5 6 -5',
+  calendar: 'M-5.5 -4h11v9.5h-11z M-5.5 -1h11 M-2.5 -6v3.2 M2.5 -6v3.2',
+}
+
 type P = { x: number; y: number; vx: number; vy: number }
 
 // The demo: while it is on, the agent listens through the band's microphone and answers
@@ -219,7 +228,9 @@ export function Memory({ className = '', detail = false, children }: { className
             // near counts the dots inside too: a dot that holds much is big, also while it is closed.
             // The detailed picture has small dots: more of them fit, and the lines show
             const links = Math.sqrt(near.get(n.id)?.size ?? 0)
-            const r = sat.has(n.id) ? 2.2 : detail ? (n.kind === 'person' ? 6 : 2.6 + 0.9 * links) : n.kind === 'person' ? 7 : 3 + 1.4 * links
+            const sign = SIGN[n.kind === 'source' ? n.id : n.kind === 'item' ? n.id.split('/')[0] : '']
+            const big = n.kind === 'source' ? 1.5 : 1 // the tool itself is larger than what came from it
+            const r = sign ? 7 * big : sat.has(n.id) ? 2.2 : detail ? (n.kind === 'person' ? 6 : 2.6 + 0.9 * links) : n.kind === 'person' ? 7 : 3 + 1.4 * links
             const more = !detail && holds.has(n.id)
             // a satellite has its name only while the pointer or the zoom is on it: a hundred names
             // at once are no picture, and a day's twelve lie on each other
@@ -242,7 +253,15 @@ export function Memory({ className = '', detail = false, children }: { className
                 <circle cx={x} cy={y} r={r + 6} fill="transparent" />
                 {/* what the person's last words touch, says the decisions model */}
                 {touched ? <circle className="touched" cx={x} cy={y} r={r + 5} stroke={COLOR[n.kind]} /> : null}
-                <circle cx={x} cy={y} r={r} fill={COLOR[n.kind]} />
+                {sign ? (
+                  <>
+                    {/* the card's colour behind the sign: no line runs through it */}
+                    <circle className="tool" cx={x} cy={y} r={r + 2} />
+                    <path className="dot" d={sign} transform={`translate(${x} ${y}) scale(${big})`} fill="none" stroke={COLOR[n.kind]} strokeWidth={1.3 / big} strokeLinejoin="round" strokeLinecap="round" />
+                  </>
+                ) : (
+                  <circle className="dot" cx={x} cy={y} r={r} fill={COLOR[n.kind]} />
+                )}
                 <text x={x} y={y + r + (detail ? 14 : 11)} textAnchor="middle">
                   {label}
                 </text>
