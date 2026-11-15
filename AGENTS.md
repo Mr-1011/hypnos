@@ -209,7 +209,10 @@ keys are read from `.env` at each start. Its docstring is the reference.
   The template `agent/demo/david/` also holds more of David's world, so that the Memory picture
   is full (the user's rule, 2026-11-14): `days/<n>.md` is the day n days before today, and
   `sources/` his other tools. Only the line with Maya may tell of a time that went well: `recall`
-  must find that one alone. Ask the decisions model again after a change of those lines.
+  must find that one alone. Ask the decisions model again after a change of those lines. Ask it as a spoken
+  sentence does (`Voice.fetch`: the question holds the notes and the sources too): asked with a
+  short worry alone, a line about a run by the river stayed under 0.5, and with `fetch` it came
+  back with 0.67 beside the line with Maya (2026-11-14).
 
 ### Page (`dashboard/`)
 
