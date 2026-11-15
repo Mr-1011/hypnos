@@ -238,10 +238,11 @@ export function Memory({ className = '', detail = false, children }: { className
     const push = shown.nodes.map((n) => (sat.has(n.id) ? 0.2 : 1))
     // A name is wide and low, so two dots at one height need more room than the push gives them.
     // half: half the width of a dot's name (a letter is about 6.6 px wide), 0 for one with no name.
-    // tall: a dot and the name under it. Measured 2026-11-14 with five sources: 1 to 3 names of the
+    // tall: a dot and the name under it, or a tool's mark under a name: with 30 a name still touched
+    // a mark in the David picture. Measured 2026-11-14 with five sources: 1 to 3 names of the
     // Live card lay on another name or on a mark at each of three window sizes, and none after.
     const half = shown.nodes.map((n) => (sat.has(n.id) ? 0 : Math.max(12, name(n).length * 3.3) / scale))
-    const tall = 30 / scale
+    const tall = 36 / scale
     const tick = () => {
       for (let i = 0; i < ps.length; i++) {
         for (let j = i + 1; j < ps.length; j++) {
