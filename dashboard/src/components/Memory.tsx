@@ -122,10 +122,11 @@ export function Memory({ className = '', detail = false, children }: { className
   const [zoomed, setZoomed] = useState<string | null>(null)
   const holds = useMemo(() => new Set((brain?.nodes ?? []).map((n) => n.in)), [brain])
   const shown = useMemo(() => {
-    const nodes = (brain?.nodes ?? []).filter((n) => detail || !n.in || open.has(n.in))
+    // a dot inside a closed dot shows when the agent looks at it: the line of a day that recall found
+    const nodes = (brain?.nodes ?? []).filter((n) => detail || !n.in || open.has(n.in) || !!sense?.about.includes(n.id))
     const ids = new Set(nodes.map((n) => n.id))
     return { nodes, links: (brain?.links ?? []).filter(([a, b]) => ids.has(a) && ids.has(b)) }
-  }, [brain, open, detail])
+  }, [brain, open, detail, sense])
   // the satellites of the detailed picture: small, near their dot, and they push less
   const sat = useMemo(() => new Set(detail ? (brain?.nodes ?? []).filter((n) => n.in).map((n) => n.id) : []), [brain, detail])
 
