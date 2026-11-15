@@ -80,7 +80,7 @@ from google import genai  # noqa: E402
 from loguru import logger  # noqa: E402
 from pipecat.frames.frames import (  # noqa: E402
     BotStartedSpeakingFrame, BotStoppedSpeakingFrame, FunctionCallResultProperties, InputAudioRawFrame,
-    InterimTranscriptionFrame, LLMMessagesAppendFrame, LLMRunFrame)
+    InterimTranscriptionFrame, LLMContextFrame, LLMMessagesAppendFrame, LLMRunFrame)
 from pipecat.pipeline.pipeline import Pipeline  # noqa: E402
 from pipecat.pipeline.runner import PipelineRunner  # noqa: E402
 from pipecat.pipeline.worker import PipelineWorker  # noqa: E402
@@ -174,6 +174,25 @@ class Guesses(FrameProcessor):
         await super().process_frame(frame, direction)
         if isinstance(frame, InterimTranscriptionFrame):
             self.show(frame.text)
+        await self.push_frame(frame, direction)
+
+
+class Fetch(FrameProcessor):
+    """Before Gemini answers the person's words, their memory is fetched for it (Voice.fetch) and goes
+    into the talk as one more line. Gemini then speaks in one step. Measured 2026-11-14: its step
+    that only chose the tools took 1.6 to 5 s, and the fetch takes 0.5 s. A cue is not fetched for:
+    Gemini works out with its tools what weighs on the person."""
+
+    def __init__(self, fetch):
+        super().__init__()
+        self.fetch = fetch
+
+    async def process_frame(self, frame, direction):
+        await super().process_frame(frame, direction)
+        if isinstance(frame, LLMContextFrame):
+            last = frame.context.messages[-1]
+            if isinstance(last, dict) and last.get("role") == "user" and isinstance(last.get("content"), str) and last["content"][:1] != "(":
+                frame.context.add_message({"role": "user", "content": await self.fetch(frame.context.messages)})
         await self.push_frame(frame, direction)
 
 
@@ -274,7 +293,7 @@ class Voice(LiveServer):
         speaker = LocalAudioTransport(LocalAudioTransportParams(audio_out_enabled=True))
         self.worker = PipelineWorker(
             Pipeline([BandInput(self.band_url), stt, Guesses(lambda text: self.said("you", text, final=False)),
-                      you, llm, tts, speaker.output(), agent]),
+                      you, Fetch(self.fetch), llm, tts, speaker.output(), agent]),
             idle_timeout_secs=None)  # a quiet night is no reason to stop
 
         @self.worker.event_handler("on_pipeline_error")
@@ -316,25 +335,44 @@ class Voice(LiveServer):
         Args:
             about: What weighs on the person, in a few words: "afraid of the pitch to the judges tonight".
         """
+        await params.result_callback(await self.recalled(about))
+
+    async def recalled(self, about):
         found = await brain.recall(self.google, about, self.day)
         self.touch(list(dict.fromkeys(i for day, line in found for i in (day, f"{day}/{line}"))))  # the day and its line
         today = datetime.date.fromisoformat(self.day)
-        await params.result_callback("\n".join(
-            f"{day} ({(today - datetime.date.fromisoformat(day)).days} days ago) {line}" for day, line in found)
-            or "The earlier days hold no time when that kind of thing went well.")
+        return "\n".join(
+            f"{day} ({(today - datetime.date.fromisoformat(day)).days} days ago) {line}" for day, line in found
+        ) or "The earlier days hold no time when that kind of thing went well."
 
     async def sense(self, params):
         """Ask the decisions model about the person's last words: which of your notes and which items of
         the connected tools they touch, and whether the person sounds worried. Use it when the person speaks."""
-        talk = [m for m in params.context.messages
-                if isinstance(m, dict) and m.get("role") in ("user", "assistant") and isinstance(m.get("content"), str)][-6:]
-        got = await brain.sense(self.google, "\n".join(
-            f"{'voice' if m['role'] == 'assistant' else 'person'}: {m['content']}" for m in talk), self.felt())
+        await params.result_callback(await self.sensing(self.last_lines(params.context.messages)))
+
+    def last_lines(self, messages):
+        """The end of the talk as text: what the person and the voice said, without what was fetched from the memory."""
+        talk = [m for m in messages if isinstance(m, dict) and m.get("role") in ("user", "assistant")
+                and isinstance(m.get("content"), str) and not m["content"].startswith("(memory)")][-6:]
+        return "\n".join(f"{'voice' if m['role'] == 'assistant' else 'person'}: {m['content']}" for m in talk)
+
+    async def sensing(self, talk):
+        got = await brain.sense(self.google, talk, self.felt())
         self.touch(got["about"], got["worried"])
         labels = {n["id"]: n["label"] for n in brain.graph()["nodes"]}
-        await params.result_callback(
-            (f"Their words touch: {'; '.join(labels[i] for i in got['about'])}. " if got["about"] else "Their words touch nothing you know of. ")
-            + ("They sound worried." if got["worried"] > 0.6 else "They do not sound worried."))
+        return ((f"Their words touch: {'; '.join(labels[i] for i in got['about'])}. " if got["about"] else "Their words touch nothing you know of. ")
+                + ("They sound worried." if got["worried"] > 0.6 else "They do not sound worried."))
+
+    async def fetch(self, messages):
+        """What the memory holds for the person's last words, as one line of the talk (Fetch): what the
+        tools sense and recall give, both at once. recall gets the notes and the connected sources
+        too, so that "I can't do it" finds what the person has before them."""
+        talk = self.last_lines(messages)
+        known = f"Notes about the person:\n{brain.notes()}" + "".join(f"\nTheir {name}:\n{text}" for name, text in brain.sources().items())
+        touched, found = await asyncio.gather(self.sensing(talk), self.recalled(
+            f"{talk}\n\nIt is {time.strftime('%A, %Y-%m-%d %H:%M')}.\n{known}"))
+        # the stage of sleep too: Gemini follows it, and no longer asks its body tool for it
+        return f"(memory) {self.asleep()} {touched} Earlier times that went well, the surest first:\n{found}"
 
     async def body(self, params):
         """How the person's body is now: the stage of sleep and the cycle of the night, how much the wrist
